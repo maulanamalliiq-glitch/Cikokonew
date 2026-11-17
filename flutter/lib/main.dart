@@ -41,6 +41,7 @@ import 'boarding_houses_page.dart';
 import 'lpj_pages.dart';
 import 'cikoko_ppsu_leave.dart' show CikokoPpsuLeaveHub;
 import 'cikoko_pppk_performance.dart';
+import 'cikoko_reviews.dart';
 import 'cikoko_pjlp_2557_page.dart';
 
 const navy=V6.ink, blue=V6.blue, pale=V6.background;
@@ -585,6 +586,8 @@ class _HomeState extends State<HomePage> {
       ?const ChatPage():CikokoLiveChat(api:api,userId:notificationChatOwner,title:'Percakapan Warga');
     case 'Notifikasi':return V6NotificationPage(guest:guest,events:events,onOpen:openNotification,login:openLogin);
     case 'Inovasi':return InnovationPage(api:api);
+     case 'Ulasan Aplikasi':return CikokoReviewPage(api:api);
+     case 'Rekap Ulasan':return (role=='admin'||role=='admin_kelurahan')?CikokoAdminReviewReport(api:api):const Center(child:Text('Hanya admin yang dapat membuka rekap ulasan.'));
     case 'Profil':return guest?profilePage():CivicProfilePage(
       key:const ValueKey('cikoko-profile-view'),api:api,onNavigate:switchTo,
       onLogout:()async{await api.logout();widget.onLogout();});
