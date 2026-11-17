@@ -3,6 +3,7 @@ import 'api.dart';
 import 'cikoko_v6_showcase.dart';
 import 'cikoko_kelurahan_profile.dart';
 import 'role_catalog.dart';
+import 'integrated_services.dart';
 
 class V6ServicesPage extends StatefulWidget{
  final bool guest;
@@ -134,8 +135,7 @@ class _V6ServicesState extends State<V6ServicesPage>{
       padding:const EdgeInsets.only(bottom:7),
       child:V6Panel(padding:EdgeInsets.zero,child:ListTile(
        dense:true,
-       leading:const Icon(Icons.account_balance_outlined,
-        color:V6.blue,size:22),
+       leading:CikokoServiceLogo(entry:entry,size:40),
        title:Text((entry['title']??'Layanan').toString(),
         maxLines:2,overflow:TextOverflow.ellipsis,
         style:const TextStyle(color:V6.ink,fontSize:12,
