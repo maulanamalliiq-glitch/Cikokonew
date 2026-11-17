@@ -276,6 +276,11 @@ class _PppkEditorState extends State<_PppkEditor>{
     pw.SizedBox(width:12,child:tx(':',size:8)),
     pw.Expanded(child:tx(value,size:8)),
    ]);
+   final reportTitles=pppkIndicatorsForJob(reportJabatan);
+    final rowHeight=reportTitles.length==5?85.0:113.0;
+    final pictureHeight=reportTitles.length==5?42.0:65.0;
+    final endDay=DateTime(int.tryParse(yearTitle)??DateTime.now().year,monthNumber+1,0).day;
+    final reportDay=DateTime.now().day>endDay?endDay:DateTime.now().day;
    pw.Widget progress(int i,int j){
     final key='${i+1}-${j+1}';
     final entry=i<entries.length&&entries[i] is Map?entries[i] as Map:{};
@@ -294,11 +299,7 @@ class _PppkEditorState extends State<_PppkEditor>{
       )),
      ]));
    }
-   final reportTitles=pppkIndicatorsForJob(reportJabatan);
-    final rowHeight=reportTitles.length==5?85.0:113.0;
-    final pictureHeight=reportTitles.length==5?42.0:65.0;
-    final endDay=DateTime(int.tryParse(yearTitle)??DateTime.now().year,monthNumber+1,0).day;
-    final reportDay=DateTime.now().day>endDay?endDay:DateTime.now().day;
+
     final tableBorder=pw.TableBorder.all(color:PdfColors.grey700,width:.6);
    pdf.addPage(pw.Page(pageFormat:PdfPageFormat.a4,
     margin:const pw.EdgeInsets.fromLTRB(34,26,34,26),
@@ -362,7 +363,7 @@ class _PppkEditorState extends State<_PppkEditor>{
         pw.BarcodeWidget(barcode:pw.Barcode.qrCode(),
          data:'https://datawebs.my.id/mobile-api/pppk_verify.php?token=$token',width:54,height:54)
        else pw.SizedBox(height:54,child:pw.Center(child:tx('Menunggu persetujuan Admin',size:6.5))),
-       tx('Desi Andriyani',size:8,strong:true,align:pw.TextAlign.center),
+       tx('Desy Andriyani',size:8,strong:true,align:pw.TextAlign.center),
        tx('NIP 198712292010012024',size:7,align:pw.TextAlign.center),
       ])),
      ]),
