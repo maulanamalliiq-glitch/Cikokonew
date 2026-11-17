@@ -51,7 +51,7 @@ function pj57_photo(): string {
 }
 
 function pj57_employee(PDO $db, string $id, array $actor): array {
-    if ($actor['user_role'] === 'pjlp' && $actor['user_id'] !== $id) {
+    if (in_array($actor['user_role'], ['pjlp','pppk'],true) && $actor['user_id'] !== $id) {
         mobile_error('Akses data pegawai ditolak.', 403);
     }
     $row = pj57_query($db, 'SELECT user_id, full_name, work_unit, hired_on, supervisor_user_id FROM pjlp_employees WHERE active=1 AND user_id=?', [$id])->fetch();
@@ -126,7 +126,7 @@ function cikoko_pjlp_2557_dispatch(string $action, string $method): void {
     $role = (string)$actor['user_role'];
     $uid = (string)$actor['user_id'];
     $admin = $role === 'admin';
-    if (!$admin && !in_array($role, ['pjlp','asn'], true)) {
+    if (!$admin && !in_array($role, ['pjlp','pppk','asn'], true)) {
         mobile_error('Akses modul PJLP ditolak.', 403);
     }
     $multipart = in_array($action, ['pjlp_attendance_submit','pjlp_job_progress','pjlp_daily_report_submit'], true);
@@ -134,7 +134,7 @@ function cikoko_pjlp_2557_dispatch(string $action, string $method): void {
     if ($method !== ($read ? 'GET' : 'POST')) {
         mobile_error('Metode tidak diizinkan.', 405);
     }
-    if ($multipart ? $role !== 'pjlp' : (!$read && !$admin && !($action === 'pjlp_daily_report_open' && $role === 'pjlp'))) {
+    if ($multipart ? !in_array($role,['pjlp','pppk'],true) : (!$read && !$admin && !($action === 'pjlp_daily_report_open' && in_array($role,['pjlp','pppk'],true)))) {
         mobile_error('Akun tidak berwenang untuk tindakan ini.', 403);
     }
     $db = mobile_db();
@@ -165,10 +165,10 @@ function cikoko_pjlp_2557_dispatch(string $action, string $method): void {
         pj57_query($db, 'INSERT INTO pj57_config VALUES (1,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE latitude=VALUES(latitude),longitude=VALUES(longitude),radius_m=VALUES(radius_m),attendance_weight=VALUES(attendance_weight),work_weight=VALUES(work_weight),evidence_weight=VALUES(evidence_weight),updated_by=VALUES(updated_by),updated_at=VALUES(updated_at)', [$lat,$lon,$radius,...$weights,$today,$uid,$timestamp]);
         mobile_json(['ok'=>true]);
     }
-    if ($action === 'pjlp_monitor_dashboard' && $role === 'pjlp' || $action === 'pjlp_self_dashboard' && $role !== 'pjlp') {
+    if ($action === 'pjlp_monitor_dashboard' && in_array($role,['pjlp','pppk'],true) || $action === 'pjlp_self_dashboard' && !in_array($role,['pjlp','pppk'],true)) {
         mobile_error('Dasbor ini tidak tersedia untuk akun Anda.', 403);
     }
-    $target = $role === 'pjlp' ? $uid : mobile_text($body['user_id'] ?? '',80);
+    $target = in_array($role,['pjlp','pppk'],true) ? $uid : mobile_text($body['user_id'] ?? '',80);
     if ($action === 'pjlp_monitor_dashboard' && $target === '') {
         $staff = $admin
             ? pj57_query($db, 'SELECT user_id,full_name,work_unit FROM pjlp_employees WHERE active=1 ORDER BY full_name')->fetchAll()
@@ -176,7 +176,7 @@ function cikoko_pjlp_2557_dispatch(string $action, string $method): void {
         mobile_json(['ok'=>true,'staff'=>$staff,'config'=>(object)($admin ? $config : [])]);
     }
     if ($action === 'pjlp_team_pdf') {
-        if ($role === 'pjlp') mobile_error('Akses rekap tim ditolak.', 403);
+        if (in_array($role,['pjlp','pppk'],true)) mobile_error('Akses rekap tim ditolak.', 403);
         $unit = mobile_text($body['unit'] ?? '',160);
         if ($unit === '') mobile_error('Pilih unit kerja.', 422);
         $sql = 'SELECT a.snapshot FROM pj57_month_approvals a JOIN pjlp_employees e ON e.user_id=a.user_id WHERE a.work_month=? AND e.work_unit=?';
@@ -293,7 +293,7 @@ function cikoko_pjlp_2557_dispatch(string $action, string $method): void {
     $data['approved'] = (bool)$approved;
     $data['server_date'] = $today;
     $data['configured'] = (bool)$config;
-    if ($role === 'pjlp') {
+    if (in_array($role,['pjlp','pppk'],true)) {
         $data['active_shift'] = pj58_active_shift($db,$uid,$now);
         $data['checked_in_today'] = (bool)pj57_query($db,"SELECT 1 FROM pj57_attendance WHERE user_id=? AND work_date=? AND event_type='checkin'",[$uid,$today])->fetchColumn();
     }
