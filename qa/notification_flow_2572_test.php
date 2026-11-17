@@ -27,6 +27,8 @@ $assert(str_contains($pppk,"VALUES('pppk_leave',?,?,'personal',?)"),
  'PPPK leave events are recipient-scoped');
 $assert(str_contains($pppk,"'pending_supervisor'=>'menunggu atasan langsung'"),
  'PPPK supervisor status clearly labeled');
+$assert(str_contains($pppk,'if($supervisor&&!$admin)'),
+ 'Admin can see all pending PPPK requests while supervisors only see assigned ones');
 $assert(str_contains($pppk,"'pending_lurah'=>'menunggu Lurah'"),
  'PPPK lurah status clearly labeled');
 $assert(str_contains($performance,"VALUES('pppk_performance',?,?,'personal',?)"),
