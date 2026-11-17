@@ -79,7 +79,7 @@ if(in_array($action,['home_slides','home_slide_photo','home_slide_upload','home_
  cikoko_home_slides_dispatch($action,$method);
 }
 
-if(in_array($action,['integrated_services','integrated_services_save','integrated_services_logo_upload'],true)){
+if(in_array($action,['integrated_services','integrated_services_public','integrated_services_logo','integrated_services_save','integrated_services_logo_upload'],true)){
  require_once __DIR__.'/integrated_services.php';
  cikoko_integrated_dispatch($action,$method);
 }
