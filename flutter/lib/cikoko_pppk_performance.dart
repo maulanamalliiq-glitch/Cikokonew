@@ -9,6 +9,22 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:flutter/services.dart';
 
+const pppkAdminIndicators=<String>[
+ 'Laporan hasil peninjauan lapangan terkait laporan/pengaduan masyarakat dalam mendukung pekerjaan yang perlu segera ditindaklanjuti karena mengganggu kepentingan publik/masyarakat',
+ 'Dokumen administrasi aktivitas/pekerjaan PPSU di tingkat Kelurahan',
+ 'Dokumen basis data yang diperlukan dalam percepatan proses pengelolaan administrasi kelurahan yang berorientasi pada pelayanan masyarakat',
+ 'Laporan pelaksanaan tugas-tugas kedinasan lainnya yang diberikan oleh pimpinan',
+];
+const pppkGeneralIndicators=<String>[
+ 'Laporan penanganan prasarana dan sarana jalan/gang',
+ 'Laporan penanganan prasarana dan sarana saluran',
+ 'Laporan penanganan prasarana dan sarana taman',
+ 'Laporan penanganan prasarana dan sarana kebersihan',
+ 'Laporan pelaksanaan tugas-tugas kedinasan lainnya yang diberikan oleh pimpinan',
+];
+List<String> pppkIndicatorsForJob(String? job)=>
+ job=='Operator Layanan Umum'?pppkGeneralIndicators:pppkAdminIndicators;
+
 class CikokoPppkPerformancePage extends StatefulWidget {
  final CikokoApi api;
  final String role;
@@ -16,12 +32,7 @@ class CikokoPppkPerformancePage extends StatefulWidget {
  @override State<CikokoPppkPerformancePage> createState()=>_PppkState();
 }
 class _PppkState extends State<CikokoPppkPerformancePage> {
- static const titles=<String>[
- 'Laporan hasil peninjauan lapangan terkait laporan/pengaduan masyarakat dalam mendukung pekerjaan yang perlu segera ditindaklanjuti karena mengganggu kepentingan publik/masyarakat',
- 'Dokumen administrasi aktivitas/pekerjaan PPSU di tingkat Kelurahan',
- 'Dokumen basis data yang diperlukan dalam percepatan proses pengelolaan administrasi kelurahan yang berorientasi pada pelayanan masyarakat',
- 'Laporan pelaksanaan tugas-tugas kedinasan lainnya yang diberikan oleh pimpinan',
- ];
+
  bool busy=false;List<dynamic> reports=[];
  bool get admin=>widget.role=='admin'||widget.role=='admin_kelurahan';
  String get currentMonth{final d=DateTime.now();return '${d.year}-${d.month.toString().padLeft(2,'0')}';}
@@ -175,7 +186,7 @@ class _PppkEditorState extends State<_PppkEditor>{
   final data=r?['payload'] as List<dynamic>? ?? [];
   final savedJabatan=data.isNotEmpty&&data[0] is Map?'${(data[0] as Map)['jabatan']??''}':'';
   jabatan=['Operator Layanan Administrasi','Operator Layanan Umum'].contains(savedJabatan)?savedJabatan:null;
-  descriptions=List.generate(4,(i)=>List.generate(2,(j)=>TextEditingController(text:i<data.length?'${(data[i] as Map)['period${j+1}']??''}':'')));
+  descriptions=List.generate(5,(i)=>List.generate(2,(j)=>TextEditingController(text:i<data.length?'${(data[i] as Map)['period${j+1}']??''}':'')));
   for(final p in r?['photos'] as List<dynamic>? ?? []){
    stored.add('${p['section_no']}-${p['period_no']}');
   }
@@ -203,7 +214,7 @@ class _PppkEditorState extends State<_PppkEditor>{
   try{
    final r=await widget.api.call('pppk_save',body:{
     'month':month,'name':name.text,'nip':nip.text,'jabatan':jabatan??'',
-    'sections':[for(final row in descriptions){'period1':row[0].text,'period2':row[1].text}],
+    'sections':[for(final row in descriptions.take(pppkIndicatorsForJob(jabatan).length)){'period1':row[0].text,'period2':row[1].text}],
    });
    id=r['id'] as int;
    for(final entry in photos.entries){
@@ -276,14 +287,19 @@ class _PppkEditorState extends State<_PppkEditor>{
        pw.Expanded(child:tx(desc.isEmpty?'Belum ada keterangan':desc,size:7)),
       ]),
       pw.SizedBox(height:5),
-      pw.Center(child:pw.SizedBox(height:65,width:155,
+      pw.Center(child:pw.SizedBox(height:pictureHeight,width:155,
        child:images.containsKey(key)
         ?pw.Image(images[key]!,fit:pw.BoxFit.contain)
         :pw.Center(child:tx('Belum ada foto',size:7)),
       )),
      ]));
    }
-   final tableBorder=pw.TableBorder.all(color:PdfColors.grey700,width:.6);
+   final reportTitles=pppkIndicatorsForJob(reportJabatan);
+    final rowHeight=reportTitles.length==5?85.0:113.0;
+    final pictureHeight=reportTitles.length==5?42.0:65.0;
+    final endDay=DateTime(int.tryParse(yearTitle)??DateTime.now().year,monthNumber+1,0).day;
+    final reportDay=DateTime.now().day>endDay?endDay:DateTime.now().day;
+    final tableBorder=pw.TableBorder.all(color:PdfColors.grey700,width:.6);
    pdf.addPage(pw.Page(pageFormat:PdfPageFormat.a4,
     margin:const pw.EdgeInsets.fromLTRB(34,26,34,26),
     build:(ctx)=>pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.stretch,children:[
@@ -312,21 +328,21 @@ class _PppkEditorState extends State<_PppkEditor>{
         pw.Container(height:29,alignment:pw.Alignment.center,padding:const pw.EdgeInsets.all(3),
          child:tx(h,size:7.5,strong:true,align:pw.TextAlign.center)),
       ]),
-      for(var i=0;i<4;i++)pw.TableRow(children:[
-       pw.Container(height:113,alignment:pw.Alignment.center,child:tx('${i+1}',size:8)),
-       pw.Container(height:113,padding:const pw.EdgeInsets.all(6),
-        child:tx(_PppkState.titles[i],size:7)),
-       pw.Container(height:113,child:progress(i,0)),
-       pw.Container(height:113,child:progress(i,1)),
+      for(var i=0;i<reportTitles.length;i++)pw.TableRow(children:[
+       pw.Container(height:rowHeight,alignment:pw.Alignment.center,child:tx('${i+1}',size:8)),
+       pw.Container(height:rowHeight,padding:const pw.EdgeInsets.all(6),
+        child:tx(reportTitles[i],size:7)),
+       pw.Container(height:rowHeight,child:progress(i,0)),
+       pw.Container(height:rowHeight,child:progress(i,1)),
       ]),
      ]),
      pw.SizedBox(height:10),
      tx('Keterangan :',size:8,strong:true),
      tx('- Progres Periode 1 laporan Pegawai dari tanggal 1 - 15 $monthTitle $yearTitle',size:7.3),
-     tx('- Progres Periode 2 laporan Pegawai dari tanggal 16 - akhir $monthTitle $yearTitle',size:7.3),
+     tx('- Progres Periode 2 laporan Pegawai dari tanggal 16 - $endDay $monthTitle $yearTitle',size:7.3),
      pw.Spacer(),
      pw.Row(children:[pw.Expanded(child:pw.SizedBox()),
-      pw.Expanded(child:pw.Center(child:tx('Jakarta, ${DateTime.now().day} $monthTitle $yearTitle',size:7.5,align:pw.TextAlign.center)))]),
+      pw.Expanded(child:pw.Center(child:tx('Jakarta, $reportDay $monthTitle $yearTitle',size:7.5,align:pw.TextAlign.center)))]),
      pw.SizedBox(height:8),
      pw.Row(crossAxisAlignment:pw.CrossAxisAlignment.start,children:[
       pw.Expanded(child:pw.Column(children:[
@@ -413,7 +429,7 @@ class _PppkEditorState extends State<_PppkEditor>{
  static const navy=Color(0xff14345c);
  static const blue=Color(0xff1768cc);
  @override Widget build(BuildContext context){
-  final completed=List.generate(4,(i)=>List.generate(2,(j){
+  final completed=List.generate(pppkIndicatorsForJob(jabatan).length,(i)=>List.generate(2,(j){
    final key='${i+1}-${j+1}';
    return descriptions[i][j].text.trim().isNotEmpty&&(stored.contains(key)||photos.containsKey(key));
   }).where((v)=>v).length).fold<int>(0,(a,b)=>a+b);
@@ -431,9 +447,9 @@ class _PppkEditorState extends State<_PppkEditor>{
       Text('Status: $status',style:const TextStyle(color:Colors.white)),
       const SizedBox(height:12),
       ClipRRect(borderRadius:BorderRadius.circular(6),child:LinearProgressIndicator(
-       value:completed/8,minHeight:8,backgroundColor:Colors.white24,valueColor:const AlwaysStoppedAnimation<Color>(Color(0xff8ce0b5)))),
+       value:completed/(2*pppkIndicatorsForJob(jabatan).length),minHeight:8,backgroundColor:Colors.white24,valueColor:const AlwaysStoppedAnimation<Color>(Color(0xff8ce0b5)))),
       const SizedBox(height:8),
-      Text('$completed dari 8 dokumentasi lengkap',style:const TextStyle(color:Colors.white,fontSize:12)),
+      Text('$completed dari ${2*pppkIndicatorsForJob(jabatan).length} dokumentasi lengkap',style:const TextStyle(color:Colors.white,fontSize:12)),
      ])),
     const SizedBox(height:16),
     if(status=='approved')const Card(child:Padding(padding:EdgeInsets.all(14),
@@ -470,7 +486,7 @@ class _PppkEditorState extends State<_PppkEditor>{
       const Text('Golongan: -',style:TextStyle(color:Color(0xff63748a))),
      ]))),
     const SizedBox(height:12),
-    for(var i=0;i<4;i++)Container(
+    for(var i=0;i<pppkIndicatorsForJob(jabatan).length;i++)Container(
      margin:const EdgeInsets.only(bottom:14),
      decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),
       border:Border.all(color:const Color(0xffdce6f3))),
@@ -478,9 +494,9 @@ class _PppkEditorState extends State<_PppkEditor>{
       Container(width:double.infinity,padding:const EdgeInsets.all(14),
        decoration:const BoxDecoration(color:Color(0xffeaf2ff),borderRadius:BorderRadius.vertical(top:Radius.circular(16))),
        child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Text('KEGIATAN ${i+1} / 4',style:const TextStyle(color:blue,fontWeight:FontWeight.bold,fontSize:11,letterSpacing:1)),
+        Text('KEGIATAN ${i+1} / ${pppkIndicatorsForJob(jabatan).length}',style:const TextStyle(color:blue,fontWeight:FontWeight.bold,fontSize:11,letterSpacing:1)),
         const SizedBox(height:6),
-        Text(_PppkState.titles[i],style:const TextStyle(fontWeight:FontWeight.w700,color:navy)),
+        Text(pppkIndicatorsForJob(jabatan)[i],style:const TextStyle(fontWeight:FontWeight.w700,color:navy)),
        ])),
       for(var j=0;j<2;j++)Padding(
        padding:const EdgeInsets.fromLTRB(14,12,14,10),
