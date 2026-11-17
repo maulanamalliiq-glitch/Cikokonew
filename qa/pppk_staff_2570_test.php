@@ -14,7 +14,7 @@ foreach(['pppk_staff_attendance','pppk_staff_daily','pppk_staff_leave_requests',
  check_2570(str_contains($api,$name),'separate table '.$name);
 check_2570(!preg_match('/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+(?:pj57_|pj58_|pjlp_)/i',$api),
  'PPPK cannot mutate existing PJLP attendance or leave tables');
-check_2570(str_contains($api,"$role==='pppk'"),'PPPK authorization gate');
+check_2570(str_contains($api, '\$role===\'pppk\''),'PPPK authorization gate');
 check_2570(str_contains($api,'pppk_staff_geofence'),'geofence verification');
 check_2570(str_contains($api,'GET_LOCK'),'concurrent leave requests guarded');
 echo "PPPK 2570 route and separation checks passed\n";
