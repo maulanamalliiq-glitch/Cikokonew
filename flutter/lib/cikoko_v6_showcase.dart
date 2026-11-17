@@ -450,8 +450,6 @@ class V6Home extends StatelessWidget{
     V6BoardingHousePreview(api:api,onAll:()=>navigate('Data Rumah Kos')),
     const SizedBox(height:16),
     V6InnovationPreview(api:api,onAll:()=>navigate('Inovasi')),
-     const SizedBox(height:15),
-     CikokoReviewSummary(api:api,onAll:()=>navigate('Ulasan Aplikasi')),
     const SizedBox(height:17),
     const V6Section(title:'Informasi & Kegiatan'),
     Wrap(spacing:7,runSpacing:7,children:[
@@ -463,6 +461,8 @@ class V6Home extends StatelessWidget{
         avatar:Icon(item.$2,color:V6.blue,size:16),
         onPressed:()=>navigate(item.$3)),
     ]),
+    const SizedBox(height:15),
+    CikokoReviewSummary(api:api,onAll:()=>navigate('Ulasan Aplikasi')),
    ],
   ));
  }
