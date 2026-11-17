@@ -64,7 +64,25 @@ class CikokoApi {
       final http.Response r= body==null ? await http.get(u,headers:headers).timeout(const Duration(seconds:25)) : await http.post(u, headers:headers,body:jsonEncode(body)).timeout(const Duration(seconds:40));
       final d=jsonDecode(utf8.decode(r.bodyBytes));
       if(d is! Map<String,dynamic>)throw ApiError('Balasan server tidak valid');
-      if(r.statusCode>=400 || d['ok']==false){final msg='${d['error']??'Layanan belum tersedia.'}';throw ApiError(RegExp(r'SQLSTATE|database|INSERT INTO|PDO|Fatal error',caseSensitive:false).hasMatch(msg)?'Layanan Cikoko sedang mengalami kendala. Silakan mencoba kembali.':msg);}
+      if(r.statusCode>=400 || d['ok']==false){
+        final msg='${d['error']??'Layanan belum tersedia.'}';
+        final lower=msg.toLowerCase();
+        final feature=action.startsWith('chat_v2548_')?'chat':
+          action.startsWith('review_')?'ulasan':
+          action.startsWith('pppk_staff_')?'modul PPPK':'';
+        if(feature.isNotEmpty&&(r.statusCode==404||
+          lower.contains('endpoint tidak tersedia')||lower.contains('aksi tidak tersedia'))){
+          throw ApiError('Layanan '+feature+' belum tersedia pada server (HTTP '+
+            r.statusCode.toString()+'). Admin perlu memperbarui mobile-api.');
+        }
+        if(feature=='chat'&&r.statusCode>=500){
+          throw ApiError('Server chat mengalami kendala (HTTP '+
+            r.statusCode.toString()+'). Gunakan Cek Server untuk memeriksa layanan.');
+        }
+        throw ApiError(RegExp(r'SQLSTATE|database|INSERT INTO|PDO|Fatal error',
+          caseSensitive:false).hasMatch(msg)
+          ?'Layanan Cikoko sedang mengalami kendala. Silakan mencoba kembali.':msg);
+       }
       successful=true;
       return d;
     } on SocketException {throw ApiError('Tidak ada koneksi internet');}
