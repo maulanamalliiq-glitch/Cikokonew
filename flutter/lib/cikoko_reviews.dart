@@ -23,6 +23,8 @@ class _ReviewSummaryState extends State<CikokoReviewSummary>{
   final rows=(data?['items'] as List? ?? []).whereType<Map>().take(3);
   return Column(key:const Key('cikoko_home_reviews'),crossAxisAlignment:CrossAxisAlignment.start,children:[
    Row(children:[const Expanded(child:Text('Ulasan Pengguna',style:TextStyle(fontSize:15,fontWeight:FontWeight.w800))),
+    IconButton(key:const Key('reviews_refresh'),tooltip:'Muat ulang jumlah ulasan',
+      onPressed:load,icon:const Icon(Icons.refresh_rounded)),
     TextButton(onPressed:widget.onAll,child:const Text('Lihat semua  →'))]),
    Card(color:Colors.white,child:Padding(padding:const EdgeInsets.all(13),
     child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
