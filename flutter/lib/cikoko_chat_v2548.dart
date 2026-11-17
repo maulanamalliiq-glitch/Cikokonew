@@ -206,6 +206,11 @@ class _CikokoLiveChatState extends State<CikokoLiveChat> with WidgetsBindingObse
       })
      :await widget.api.call('chat_send',body:{'message':msg});
    }
+   final confirmedId=int.tryParse((confirmation['id']??0).toString())??0;
+   if(confirmedId<1 || confirmation['stored']!=true){
+    throw ApiError('Server chat belum mengonfirmasi pesan tersimpan. Muat ulang sebelum mencoba lagi.');
+   }
+   if(!mounted)return;
    input.clear();
    showConfirmed(confirmation,message:msg,photoSent:false);
    await reload();
