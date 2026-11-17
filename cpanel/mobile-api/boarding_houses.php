@@ -101,6 +101,7 @@ function cikoko_boarding_public(PDO $db): void {
         $items[] = [
             'id' => (int)$row['id'],
             'name' => (string)$row['name'],
+            'verified' => true, // All rows in this public query passed the verified filter.
             'rt' => (string)$row['rt'],
             'rw' => (string)$row['rw'],
             'address' => (int)$row['public_address'] === 1 ? (string)$row['address'] : '',
