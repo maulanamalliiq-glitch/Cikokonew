@@ -3,6 +3,7 @@ import 'api.dart';
 import 'role_catalog.dart';
 import 'cikoko_home_sections.dart';
 import 'cikoko_home_extra.dart';
+import 'cikoko_reviews.dart';
 
 /// Single design vocabulary based on the supplied Cikoko Smart V4 16-screen showcase.
 /// Keep server values and permissions as the source of truth: no demo reports or fake service data.
@@ -449,6 +450,8 @@ class V6Home extends StatelessWidget{
     V6BoardingHousePreview(api:api,onAll:()=>navigate('Data Rumah Kos')),
     const SizedBox(height:16),
     V6InnovationPreview(api:api,onAll:()=>navigate('Inovasi')),
+     const SizedBox(height:15),
+     CikokoReviewSummary(api:api,onAll:()=>navigate('Ulasan Aplikasi')),
     const SizedBox(height:17),
     const V6Section(title:'Informasi & Kegiatan'),
     Wrap(spacing:7,runSpacing:7,children:[
