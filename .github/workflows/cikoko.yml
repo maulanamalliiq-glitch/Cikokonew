@@ -70,7 +70,8 @@ jobs:
   build:
     name: Build APK ARM64 dan AAB signed
     needs: verify
-    if: github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && inputs.build_release) || (github.event_name == 'push' && github.event.head_commit.message == 'ci: build Cikokonew release 2567'))
+    if: >-
+      github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && inputs.build_release) || (github.event_name == 'push' && github.event.head_commit.message == 'ci: build Cikokonew release 2567'))
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
