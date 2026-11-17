@@ -12,8 +12,13 @@ class CikokoReviewSummary extends StatefulWidget{
 }
 class _ReviewSummaryState extends State<CikokoReviewSummary>{
  Map<String,dynamic>? data;
+ bool unavailable=false;
  @override void initState(){super.initState();load();}
- Future<void> load()async{try{final v=await widget.api.call('review_public');if(mounted)setState(()=>data=v);}catch(_){}}
+ Future<void> load()async{
+  try{final v=await widget.api.call('review_public');
+   if(mounted)setState((){data=v;unavailable=false;});
+  }catch(_){if(mounted)setState(()=>unavailable=true);}
+ }
  @override Widget build(BuildContext context){
   final rows=(data?['items'] as List? ?? []).whereType<Map>().take(3);
   return Column(key:const Key('cikoko_home_reviews'),crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -21,10 +26,12 @@ class _ReviewSummaryState extends State<CikokoReviewSummary>{
     TextButton(onPressed:widget.onAll,child:const Text('Lihat semua  →'))]),
    Card(color:Colors.white,child:Padding(padding:const EdgeInsets.all(13),
     child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-     Row(children:[const Icon(Icons.star_rounded,color:Color(0xFFFFB000),size:27),const SizedBox(width:7),
+     if(data!=null)Row(children:[const Icon(Icons.star_rounded,color:Color(0xFFFFB000),size:27),const SizedBox(width:7),
       Text((data?['average_stars']??0).toString()+'/5',style:const TextStyle(fontWeight:FontWeight.w800,fontSize:18)),
       const SizedBox(width:8),Text((data?['review_count']??0).toString()+' ulasan')]),
-     if(rows.isEmpty)const Text('Belum ada ulasan pengguna.'),
+     if(unavailable)const Text('Layanan ulasan belum tersedia di server. Admin perlu memperbarui Mobile API.',
+    style:TextStyle(color:Colors.deepOrange,fontSize:12)),
+     if(!unavailable&&data!=null&&rows.isEmpty)const Text('Belum ada ulasan pengguna.'),
      for(final row in rows)Padding(padding:const EdgeInsets.only(top:8),child:Column(
        crossAxisAlignment:CrossAxisAlignment.start,children:[
         Text((row['display_name']??'Pengguna').toString()+' • '+('★'*(int.tryParse((row['stars']??0).toString())??0)),
@@ -73,7 +80,7 @@ class _ReviewPageState extends State<CikokoReviewPage>{
    FilledButton.icon(onPressed:sending?null:submit,icon:const Icon(Icons.rate_review),
     label:const Text('Kirim Ulasan')),
    const SizedBox(height:14),
-   Text('Rata-rata '+(data?['average_stars']??0).toString()+'/5 • '+(data?['review_count']??0).toString()+' ulasan'),
+   if(data!=null)Text('Rata-rata '+(data?['average_stars']??0).toString()+'/5 • '+(data?['review_count']??0).toString()+' ulasan'),
    for(final row in (data?['items'] as List? ?? []).whereType<Map>())
     Card(child:ListTile(title:Text((row['display_name']??'Pengguna').toString()+' • '+
       ('★'*(int.tryParse((row['stars']??0).toString())??0))),
