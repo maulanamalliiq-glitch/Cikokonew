@@ -36,6 +36,9 @@ class _V6AnnouncementTickerState extends State<V6AnnouncementTicker> {
     super.didUpdateWidget(oldWidget);
     if (widget.items != oldWidget.items) {
       current = 0;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && controller.hasClients) controller.jumpToPage(0);
+      });
       _start();
     }
   }
@@ -104,6 +107,9 @@ class _V6AnnouncementTickerState extends State<V6AnnouncementTicker> {
               height: 48,
               child: PageView.builder(
                 controller: controller,
+                onPageChanged: (index) {
+                  if (mounted) setState(() => current = index);
+                },
                 itemCount: visible.length,
                 itemBuilder: (context, index) {
                   final row = visible[index];
