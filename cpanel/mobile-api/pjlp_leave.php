@@ -23,7 +23,7 @@ function pjlp_audit(PDO $db,?int $requestId,string $actor,string $event,array $d
 }
 function pjlp_notify(PDO $db,string $recipient,string $title,string $message):void {
  try{
-  $s=$db->prepare("INSERT INTO mobile_events(category,title,message,audience,recipient) VALUES('leave',?,?,'private',?)");
+  $s=$db->prepare("INSERT INTO mobile_events(category,title,message,audience,recipient) VALUES('leave',?,?,'personal',?)");
   $s->execute([$title,$message,$recipient]);
  }catch(Throwable $e){error_log('PJLP leave notification: '.$e->getMessage());}
 }
