@@ -146,6 +146,10 @@ if(in_array($action,['review_public','review_submit','review_admin'],true)){
   require_once __DIR__.'/reviews.php';
   cikoko_reviews_dispatch($action,$method);
 }
+if(str_starts_with($action,'pppk_staff_')){
+  require_once __DIR__.'/pppk_staff.php';
+  pppk_staff_dispatch($action,$method);
+}
 if(str_starts_with($action,'pppk_')){
  require_once __DIR__.'/pppk_performance.php';
  pppk_dispatch($action,$method);
