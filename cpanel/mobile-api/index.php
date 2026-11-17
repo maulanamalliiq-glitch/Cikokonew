@@ -142,6 +142,10 @@ if(in_array($action,['dynamic_modules','dynamic_modules_save'],true)){
  require_once __DIR__.'/dynamic_modules_2552.php';
  cikoko_dynamic_dispatch($action,$method);
 }
+if(in_array($action,['review_public','review_submit','review_admin'],true)){
+  require_once __DIR__.'/reviews.php';
+  cikoko_reviews_dispatch($action,$method);
+}
 if(str_starts_with($action,'pppk_')){
  require_once __DIR__.'/pppk_performance.php';
  pppk_dispatch($action,$method);
