@@ -36,6 +36,7 @@ Untuk notifikasi tanpa `event_id`, aplikasi membuka kotak masuk atau halaman umu
 - Urutkan berdasarkan nomor event terbaru. Pesan lama dibaca tetap ada pada daftar, tidak otomatis dihapus.
 - Tombol **Tandai semua** hanya berlaku untuk `recipient` akun yang sedang login.
 - Notifikasi FCM saat aplikasi terbuka dan polling untuk event yang sama menggunakan satu ID agar tidak berganda.
+- Persetujuan atasan cuti PPPK hanya muncul pada akun atasan yang dipasangkan ke pengajuan; admin kelurahan tetap dapat memantau semua pengajuan, bukan mengambil alih keputusan atasan yang lain.
 - Admin menampilkan jumlah token HP, antrean, diterima FCM, gagal dan tanpa token; jangan menyebut diterima FCM sebagai **pesan sudah dibaca**.
 
 ## Pemasangan server & migrasi
