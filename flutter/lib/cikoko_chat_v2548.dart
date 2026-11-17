@@ -204,21 +204,12 @@ class _CikokoLiveChatState extends State<CikokoLiveChat> with WidgetsBindingObse
   if(sending||msg.isEmpty)return;
   setState(()=>sending=true);
   try{
-   Map<String,dynamic> confirmation;
-   try{
-    confirmation=await widget.api.call('chat_v2548_send',body:{
-     'message':msg,if(isStaff)'user_id':widget.userId,
+    // Require canonical persisted acknowledgement; never double-write to
+    // an incompatible legacy endpoint after uncertain send failures.
+    final confirmation=await widget.api.call('chat_v2548_send',body:{
+      'message':msg,if(isStaff)'user_id':widget.userId,
     });
-   }on ApiError catch(e){
-    // Never retry uncertain network writes, which may already be saved.
-    if(!cikokoLegacyChatFallbackAllowed(e))rethrow;
-    confirmation=isStaff
-     ?await widget.api.call('chat_reply',body:{
-       'user_id':widget.userId,'message':msg,
-      })
-     :await widget.api.call('chat_send',body:{'message':msg});
-   }
-   final confirmedId=int.tryParse((confirmation['id']??0).toString())??0;
+    final confirmedId=int.tryParse((confirmation['id']??0).toString())??0;
    if(confirmedId<1 || confirmation['stored']!=true){
     throw ApiError('Server chat belum mengonfirmasi pesan tersimpan. Muat ulang sebelum mencoba lagi.');
    }
