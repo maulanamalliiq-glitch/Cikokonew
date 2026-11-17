@@ -34,12 +34,13 @@ function pppk_staff_schema(PDO $db):void {
     REFERENCES pppk_staff_attendance(id)
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
  $db->exec("CREATE TABLE IF NOT EXISTS pppk_staff_leave_settings(
-  user_id VARCHAR(80) NOT NULL PRIMARY KEY,
+  user_id VARCHAR(80) NOT NULL,
   supervisor_user_id VARCHAR(80) NOT NULL,
   leave_year SMALLINT UNSIGNED NOT NULL,
   allowance_days SMALLINT UNSIGNED NOT NULL DEFAULT 0,
   updated_by VARCHAR(80) NOT NULL,
-  updated_at DATETIME NOT NULL
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (user_id,leave_year)
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
  $db->exec("CREATE TABLE IF NOT EXISTS pppk_staff_leave_requests(
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -309,7 +310,7 @@ function pppk_staff_dispatch(string $action,string $method):void {
   $q=$db->prepare('INSERT INTO pppk_staff_leave_settings
     (user_id,supervisor_user_id,leave_year,allowance_days,updated_by,updated_at)
     VALUES(?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE supervisor_user_id=VALUES(supervisor_user_id),
-    leave_year=VALUES(leave_year),allowance_days=VALUES(allowance_days),
+    allowance_days=VALUES(allowance_days),
     updated_by=VALUES(updated_by),updated_at=NOW()');
   $q->execute([$owner,$boss,$year,$days,$uid]);
   mobile_json(['ok'=>true,'message'=>'Jatah dan atasan PPPK berhasil ditetapkan.']);
