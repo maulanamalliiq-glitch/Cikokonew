@@ -18,6 +18,23 @@ function pppk_staff_schema(PDO $db):void {
   }
  }
 }
+/** Queue a personal notification in the same DB transaction as leave changes. */
+function pppk_staff_notify(PDO $db,string $recipient,string $title,string $message):void{
+ if(trim($recipient)==='')return;
+ $q=$db->prepare("INSERT INTO mobile_events(category,title,message,audience,recipient)
+   VALUES('pppk_leave',?,?,'personal',?)");
+ $q->execute([mobile_text($title,240),mobile_text($message,2000),$recipient]);
+}
+function pppk_staff_official_recipients(array $roles):array{
+ $ids=[];
+ if(in_array('admin',$roles,true))$ids['admin']=true;
+ foreach(db_read('portal_users') as $account){
+  if(!is_array($account)||empty($account['active']))continue;
+  $id=trim((string)($account['id']??''));
+  if($id!==''&&in_array((string)($account['role']??''),$roles,true))$ids[$id]=true;
+ }
+ return array_keys($ids);
+}
 function pppk_staff_json_photo(string $encoded):string {
  if(strlen($encoded)>2800000)mobile_error('Foto melebihi batas 2 MB.',422);
  $bytes=base64_decode($encoded,true);
@@ -227,6 +244,12 @@ function pppk_staff_dispatch(string $action,string $method):void {
      VALUES(?,?,?,?,?,?,?,?,?,?)');
    $q->execute([$uid,$year,$a,$b,$days,$reason,$address,$phone,$cfg['supervisor_user_id'],
      (new DateTimeImmutable('now',new DateTimeZone('Asia/Jakarta')))->format('Y-m-d H:i:s')]);
+   $newId=(int)$db->lastInsertId();
+   pppk_staff_notify($db,$uid,'Cuti PPPK diajukan',
+    'Pengajuan cuti #'.$newId.' diterima dan menunggu pemeriksaan admin.');
+   foreach(pppk_staff_official_recipients(['admin','admin_kelurahan']) as $receiver)
+    pppk_staff_notify($db,$receiver,'Pengajuan cuti PPPK baru',
+     'Cuti PPPK #'.$newId.' menunggu pemeriksaan admin.');
    $db->commit();
   }finally{
    if($db->inTransaction())$db->rollBack();
@@ -299,6 +322,21 @@ function pppk_staff_dispatch(string $action,string $method):void {
    $next=$decision==='reject'?'rejected':$next;
    $q=$db->prepare('UPDATE pppk_staff_leave_requests SET status=?,reviewed_at=NOW() WHERE id=?');
    $q->execute([$next,$id]);
+   $label=[
+    'pending_supervisor'=>'menunggu atasan langsung',
+    'pending_lurah'=>'menunggu Lurah',
+    'approved'=>'disetujui',
+    'rejected'=>'ditolak',
+   ][$next]??$next;
+   pppk_staff_notify($db,(string)$leave['user_id'],'Status cuti PPPK #'.$id,
+    'Pengajuan cuti PPPK #'.$id.' '.$label.'.');
+   if($next==='pending_supervisor')
+    pppk_staff_notify($db,(string)$leave['supervisor_user_id'],
+     'Persetujuan atasan: Cuti PPPK','Cuti PPPK #'.$id.' menunggu keputusan Anda.');
+   if($next==='pending_lurah')
+    foreach(pppk_staff_official_recipients(['lurah']) as $receiver)
+     pppk_staff_notify($db,$receiver,'Persetujuan Lurah: Cuti PPPK',
+      'Cuti PPPK #'.$id.' menunggu keputusan Lurah.');
    $db->commit();
   }finally{if($db->inTransaction())$db->rollBack();}
   mobile_json(['ok'=>true,'message'=>'Keputusan cuti PPPK berhasil dicatat.']);
