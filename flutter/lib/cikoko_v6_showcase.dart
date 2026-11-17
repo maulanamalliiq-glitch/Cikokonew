@@ -439,6 +439,7 @@ class V6Home extends StatelessWidget{
      V6LetterStatusStrip(counts:letterCounts,onStatus:letterStatus),
      const SizedBox(height:16),
      // Public home stays compact: full service directory remains on the Layanan tab.
+     const SizedBox(height:0),
     V6AnnouncementTicker(items:items,onAll:()=>navigate('Pengumuman')),
     const SizedBox(height:12),
     V6NewsCarousel(items:items,api:api,onOpen:articleTap,
