@@ -58,6 +58,7 @@ jobs:
           php qa/chat_inbox_2563_test.php
           php qa/chat_hardcheck_2565_test.php
           php qa/pjlp_shift_recap_2558_test.php
+          php qa/pppk_staff_2570_test.php
       - name: Siapkan Flutter dan uji
         working-directory: flutter
         run: |
