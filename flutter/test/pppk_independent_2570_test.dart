@@ -26,8 +26,8 @@ void main(){
   expect(pppk,contains('Kehadiran PPPK'));
   expect(pppk,contains('Cuti PPPK'));
   expect(pppk,contains('Kinerja PPPK'));
-  expect(pppk,contains(isNot('Absensi dan Kinerja PJLP')));
-  expect(pppk,contains(isNot('Cuti PPSU')));
+  expect(pppk,isNot(contains('Absensi dan Kinerja PJLP')));
+  expect(pppk,isNot(contains('Cuti PPSU')));
   expect(pjlp,contains('Absensi dan Kinerja PJLP'));
   expect(pjlp,contains('Cuti PPSU'));
  });
