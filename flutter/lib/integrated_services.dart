@@ -46,7 +46,10 @@ class CikokoServiceLogo extends StatelessWidget {
   };
   final fallback=Icon(icons[id]??Icons.widgets_outlined,color:_accent,size:size*.65);
   if(uri!=null&&uri.scheme=='https'&&uri.host.isNotEmpty){
-   return Image.network(url,width:size,height:size,fit:BoxFit.contain,
+   final source=uri.host=='datawebs.my.id'&&uri.path.startsWith('/mobile-api/service-logos/')
+    ? CikokoApi.root+'?action=integrated_services_logo&id='+Uri.encodeQueryComponent(id)
+    :url;
+   return Image.network(source,width:size,height:size,fit:BoxFit.contain,
     errorBuilder:(_,__,___)=>fallback);
   }
   return fallback;
