@@ -59,7 +59,10 @@ function pppk_dispatch(string $action,string $method):void {
   $v=mobile_body();$month=(string)($v['month']??'');
   if(!preg_match('/^20[2-9][0-9]-(0[1-9]|1[0-2])$/D',$month))mobile_error('Bulan laporan tidak valid');
   $parts=$v['sections']??null;
-  if(!is_array($parts)||count($parts)!==4)mobile_error('Harus ada empat kelompok kegiatan');
+  if(!is_array($parts))mobile_error('Kelompok kegiatan tidak valid',422);
+   $jabatan=trim((string)($v['jabatan']??''));
+   $expected=$jabatan==='Operator Layanan Umum'?5:4;
+   if(count($parts)!==$expected)mobile_error('Jumlah indikator harus sesuai jabatan: '.$expected,422);
   $jabatan=trim((string)($v['jabatan']??''));
   $allowedJabatan=['Operator Layanan Administrasi','Operator Layanan Umum'];
   if($jabatan!==''&&!in_array($jabatan,$allowedJabatan,true))mobile_error('Pilihan jabatan tidak valid');
@@ -87,7 +90,9 @@ function pppk_dispatch(string $action,string $method):void {
   $v=mobile_body();$id=(int)($v['id']??0);$r=pppk_row($db,$id);pppk_access($r,$actor,false);
   if(!in_array($r['status'],['draft','rejected'],true))mobile_error('Laporan terkunci',409);
   $section=(int)($v['section']??0);$period=(int)($v['period']??0);
-  if($section<1||$section>4||$period<1||$period>2)mobile_error('Posisi foto tidak valid');
+  $payload=json_decode((string)$r['payload_json'],true)?:[];
+   $maxSections=count($payload);
+   if($section<1||$section>$maxSections||$period<1||$period>2)mobile_error('Posisi foto tidak valid',422);
   $raw=(string)($v['image_base64']??'');
   if(strlen($raw)>5500000)mobile_error('Foto terlalu besar, maksimal 4 MB');
   $bytes=base64_decode($raw,true);if($bytes===false||strlen($bytes)>4000000)mobile_error('Foto tidak valid');
