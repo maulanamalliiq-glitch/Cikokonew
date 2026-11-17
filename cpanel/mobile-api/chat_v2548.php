@@ -33,7 +33,7 @@ $staff=mobile_can($user,'chat:reply');
 $owner=$myId;
 if($staff){
  // Target and photo-read endpoints are resolved by event/photo ID, not a supplied thread ID.
- if(in_array($action,['chat_v2548_target','chat_v2548_photo','chat_v2548_threads'],true)){
+ if(in_array($action,['chat_v2548_target','chat_v2548_photo','chat_v2548_threads','chat_v2548_selfcheck','chat_v2548_diagnostic'],true)){
   $owner=$myId;
  }else{
   $owner=mobile_text(($method==='POST'?($_POST['user_id']??''):($_GET['user_id']??'')),80);
