@@ -27,7 +27,7 @@ function pj58_report_action(PDO $db, string $action, array $actor, array $employ
         echo $photo;
         exit;
     }
-    if ($actor['user_role'] !== 'pjlp') mobile_error('Hanya PJLP dapat mengisi laporannya sendiri.',403);
+    if (!in_array($actor['user_role'],['pjlp','pppk'],true)) mobile_error('Hanya PJLP dapat mengisi laporannya sendiri.',403);
     $timestamp = $now->format('Y-m-d H:i:s');
     $identity = [$uid,(string)($body['date'] ?? ''),$mode,$stage];
     $photo = $position = $description = null;
