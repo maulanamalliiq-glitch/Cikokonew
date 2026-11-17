@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'role_catalog.dart';
 import 'cikoko_home_sections.dart';
+import 'cikoko_home_extra.dart';
 
 /// Single design vocabulary based on the supplied Cikoko Smart V4 16-screen showcase.
 /// Keep server values and permissions as the source of truth: no demo reports or fake service data.
@@ -427,8 +428,6 @@ class V6Home extends StatelessWidget{
   this.websiteHeroUrl,this.websiteHeroFit=BoxFit.cover,
   this.websiteHeroAlignment=Alignment.center});
  @override Widget build(BuildContext context){
-  final articles=items.where((row)=>row is Map &&
-     (row['type']=='berita'||row['type']=='pengumuman')).take(3).toList();
   return RefreshIndicator(onRefresh:reload,child:ListView(
    key:const Key('v6_home'),padding:const EdgeInsets.fromLTRB(14,12,14,30),
    children:[
@@ -443,15 +442,14 @@ class V6Home extends StatelessWidget{
     const SizedBox(height:20),
     V6CitizenServices(navigate:navigate),
     const SizedBox(height:22),
+    V6AnnouncementTicker(items:items,onAll:()=>navigate('Pengumuman')),
+    const SizedBox(height:12),
+    V6NewsCarousel(items:items,api:api,onOpen:articleTap,
+      onAll:()=>navigate('Berita & Kegiatan')),
+    const SizedBox(height:12),
     V6IntegratedServiceGrid(entries:integratedServices,onOpen:integratedTap),
-    const SizedBox(height:21),
-    V6Section(title:'Berita & Informasi Terbaru',action:'Lihat Semua',
-      onAction:()=>navigate('Berita & Kegiatan')),
-    if(articles.isEmpty)const V6Panel(child:Text('Belum ada berita yang dipublikasikan.',
-      style:TextStyle(color:V6.secondary,fontSize:11.5))),
-    for(final item in articles)V6ArticleCard(
-      item:Map<String,dynamic>.from(item as Map),api:api,
-      onTap:()=>articleTap(Map<String,dynamic>.from(item))),
+    const SizedBox(height:12),
+    V6BoardingHousePreview(api:api,onAll:()=>navigate('Data Rumah Kos')),
     const SizedBox(height:16),
     V6InnovationPreview(api:api,onAll:()=>navigate('Inovasi')),
     const SizedBox(height:17),
@@ -476,9 +474,16 @@ class V6AdminHome extends StatelessWidget {
  final Map<String,int>? counts;
  final int unread;
  final List<dynamic> events;
+ final CikokoApi api;
+ final List<dynamic> items;
+ final List<Map<String,dynamic>> integratedServices;
+ final ValueChanged<Map<String,dynamic>> integratedTap;
+ final void Function(Map<String,dynamic>) articleTap;
  final void Function(String) navigate;
  const V6AdminHome({super.key,required this.modules,required this.roleName,
-   required this.counts,required this.unread,required this.events,required this.navigate});
+   required this.counts,required this.unread,required this.events,required this.api,
+   required this.items,required this.integratedServices,required this.integratedTap,
+   required this.articleTap,required this.navigate});
  @override Widget build(BuildContext context) {
   final allowed=modules.map((m)=>m.route).toSet();
   const actions=[
@@ -571,6 +576,12 @@ class V6AdminHome extends StatelessWidget {
        style:const TextStyle(fontSize:10,color:V6.secondary)))),
    if(events.isEmpty)const V6Panel(child:Text('Belum ada aktivitas.',
      style:TextStyle(fontSize:11.5,color:V6.secondary))),
+   const SizedBox(height:15),
+   V6AnnouncementTicker(items:items,onAll:()=>navigate('Pengumuman')),
+   V6NewsCarousel(items:items,api:api,onOpen:articleTap,
+     onAll:()=>navigate('Berita & Kegiatan')),
+   V6IntegratedServiceGrid(entries:integratedServices,onOpen:integratedTap),
+   V6BoardingHousePreview(api:api,onAll:()=>navigate('Data Rumah Kos')),
   ]);
  }
 }

@@ -5,6 +5,7 @@ import 'cikoko_v4_public_pages.dart';
 import 'cikoko_v5_shell.dart';
 import 'cikoko_v6_showcase.dart';
 import 'cikoko_v6_content.dart';
+import 'cikoko_home_extra.dart';
 import 'cikoko_admin_content_hub.dart';
 import 'cikoko_admin_push_page.dart';
 import 'cikoko_chat_v2548.dart';
@@ -36,6 +37,7 @@ import 'public_letters.dart';
 import 'v211_features.dart';
 import 'rt_rw_letters.dart';
 import 'rt_rw_signer_page.dart';
+import 'boarding_houses_page.dart';
 import 'lpj_pages.dart';
 import 'cikoko_ppsu_leave.dart' show CikokoPpsuLeaveHub;
 import 'cikoko_pppk_performance.dart';
@@ -234,7 +236,6 @@ class _HomeState extends State<HomePage> {
   BoxFit websiteHeroFit=BoxFit.cover;
   Alignment websiteHeroAlignment=Alignment.center;
   int get unreadCount=>events.where((e)=>e['is_read']!=true && '${e['is_read']??0}'!='1').length;
-  int chatUnread=0;
   Map<String,int>? letterCounts;
   Map<String,bool> capabilities={};
   bool loading=true,permissionsOk=false,_refreshingEvents=false;
@@ -274,18 +275,9 @@ class _HomeState extends State<HomePage> {
     try {
       // Delivery acknowledgement is not a read receipt. A visible app inbox
       // acknowledges that the receiving device fetched the relevant chat.
-      int? latestChatUnread;
       try{
         if(role=='warga')await api.call('chat_inbox');
-        else if(capabilities['chat:reply']==true){
-          try{
-            final chat=await api.call('chat_v2548_threads');
-            latestChatUnread=int.tryParse((chat['unread_total']??0).toString())??0;
-          }catch(_){
-            // Backwards-compatible while the v2563 cPanel patch is installed.
-            await api.call('chat_threads');
-          }
-        }
+        else if(capabilities['chat:reply']==true)await api.call('chat_threads');
       }catch(_){}
       final v=await api.call('events');
       final incoming=List<dynamic>.from(v['events']??[]);
@@ -294,10 +286,7 @@ class _HomeState extends State<HomePage> {
         !oldIds.contains('${e['id']??''}')&&
         ['berita','pengumuman','inovasi'].contains('${e['category']??''}'));
       await push?.onEvents(incoming);
-      if(mounted)setState((){
-        events=incoming;
-        if(latestChatUnread!=null)chatUnread=latestChatUnread;
-      });
+      if(mounted)setState(()=>events=incoming);
       if(updatedPublications)await refreshPublishedContent();
     }catch(_){}
     finally{_refreshingEvents=false;}
@@ -414,10 +403,6 @@ class _HomeState extends State<HomePage> {
       return;
     }
     if(guest&&_needsLogin(route)){openLogin();return;}
-    // Staff inbox and resident support chat share an entrypoint but not a role.
-    if(route=='Hubungi Kami'&&capabilities['chat:reply']==true){
-      route='Pesan Masuk';
-    }
     setState((){
       section=route;
       if(route=='Laporan Terpadu')nav=0;
@@ -428,7 +413,6 @@ class _HomeState extends State<HomePage> {
       else if(route=='Inovasi')nav=1;
       else if(route=='Dashboard')nav=2;
       else if(route=='Hubungi Kami')nav=3;
-      else if(route=='Pesan Masuk')nav=(role=='admin'||role=='admin_kelurahan')?-1:3;
       else if(route=='Profil')nav=4;
     });
   }
@@ -451,7 +435,7 @@ class _HomeState extends State<HomePage> {
     }
   }
   IconData iconFor(String s)=>switch(s){
-    'Dashboard'=>Icons.home_outlined,'Laporan Terpadu'=>Icons.assignment_outlined,'Tentang Kami'=>Icons.info_outline,'Menu Cikoko'=>Icons.grid_view_rounded,
+    'Pendataan Rumah Kos'=>Icons.apartment_outlined,'Dashboard'=>Icons.home_outlined,'Laporan Terpadu'=>Icons.assignment_outlined,'Tentang Kami'=>Icons.info_outline,'Menu Cikoko'=>Icons.grid_view_rounded,
     'Berita & Kegiatan'=>Icons.newspaper_outlined,'Pengumuman'=>Icons.campaign_outlined,
     'Layanan Online'=>Icons.widgets_outlined,'Galeri'=>Icons.photo_library_outlined,
     'Surat Ahli Waris'=>Icons.description_outlined,'Persyaratan Ahli Waris'=>Icons.fact_check_outlined,'Surat Pengantar RT/RW'=>Icons.markunread_mailbox_outlined,
@@ -497,13 +481,6 @@ class _HomeState extends State<HomePage> {
        ])),
       ]),
       actions:[
-       if(capabilities['chat:reply']==true)
-        IconButton(
-         tooltip:'Pesan masuk',onPressed:()=>switchTo('Pesan Masuk'),
-         icon:Badge(
-          isLabelVisible:chatUnread>0,
-          label:Text(chatUnread>99?'99+':chatUnread.toString()),
-          child:const Icon(Icons.forum_outlined,color:V6.ink))),
        IconButton(tooltip:'Notifikasi',onPressed:()=>switchTo('Notifikasi'),
          icon:Badge(isLabelVisible:unreadCount>0,label:Text('$unreadCount'),
            child:const Icon(Icons.notifications_none_outlined,color:V6.ink))),
@@ -583,6 +560,8 @@ class _HomeState extends State<HomePage> {
     case 'Galeri':return V6GalleryPage(api:api,content:items);
     case 'Surat Ahli Waris':return _v6Form('Pengajuan Ahli Waris','Lengkapi formulir dan dokumen yang diminta.',const WarisForm());
     case 'Surat Pengantar RT/RW':return _v6Form('Pengantar RT/RW','Lengkapi data pengantar wilayah.',RtRwLettersPage(api:api));
+    case 'Data Rumah Kos':return V6BoardingHouseDirectoryPage(api:api);
+    case 'Pendataan Rumah Kos':return BoardingHousesPage(api:api,role:role);
     case 'Surat Wilayah':return RtRwLettersPage(api:api);
     case 'TTD & Stempel':return RtRwSignerPage(api:api);
     case 'Wilayah Ketua RT/RW':return RtRwOfficerManager(api:api);
@@ -600,13 +579,8 @@ class _HomeState extends State<HomePage> {
     case 'Laporan Kerja Bakti':return _v6Form('Laporan Kerja Bakti','Pelaporan kegiatan kerja bakti.',const ReportForm(kind:'kerja_bakti'));
     case 'Laporan PPSU':return _v6Form('Laporan PPSU','Dokumentasi kegiatan PPSU.',PpsuReportPage(api:api));
     case 'Riwayat':return V6HistoryPage(api:api,onOpen:_openV6History);
-    case 'Hubungi Kami':return capabilities['chat:reply']==true
-       ?AdminChatPage(onUnreadChanged:(total){
-         if(mounted)setState(()=>chatUnread=total);
-       }):const ChatPage();
-    case 'Pesan Masuk':return AdminChatPage(onUnreadChanged:(total){
-       if(mounted)setState(()=>chatUnread=total);
-     });
+    case 'Hubungi Kami':return const ChatPage();
+    case 'Pesan Masuk':return const AdminChatPage();
     case 'Percakapan Chat':return role=='warga'||notificationChatOwner==null
       ?const ChatPage():CikokoLiveChat(api:api,userId:notificationChatOwner,title:'Percakapan Warga');
     case 'Notifikasi':return V6NotificationPage(guest:guest,events:events,onOpen:openNotification,login:openLogin);
@@ -670,7 +644,7 @@ class _HomeState extends State<HomePage> {
   Widget home(){
     if(role=='admin'||role=='admin_kelurahan'){
       return V6AdminHome(modules:modules,roleName:roleLabel,
-        counts:letterCounts,unread:unreadCount,events:events,navigate:switchTo);
+        counts:letterCounts,unread:unreadCount,events:events,api:api,items:items,integratedServices:activeServices,integratedTap:_openIntegratedService,articleTap:_openV5Article,navigate:_openV6Service);
     }
     return V6Home(role:role,guest:guest,modules:modules,
       api:api,items:items,letterCounts:letterCounts,
@@ -825,14 +799,14 @@ class _HomeState extends State<HomePage> {
      try{
        final result=await api.callWithParams('chat_v2548_target',{'event_id':id.toString()});
        final owner=(result['thread_user_id']??'').toString();
-       if(capabilities['chat:reply']==true && owner.isNotEmpty && mounted){
+       if(isStaff && owner.isNotEmpty && mounted){
          setState(()=>notificationChatOwner=owner);
          switchTo('Percakapan Chat');
          return;
        }
      }catch(_){/* Notification from previous API uses the legacy inbox. */}
    }
-   if(mounted)switchTo(capabilities['chat:reply']==true?'Pesan Masuk':'Hubungi Kami');
+   if(mounted)switchTo(isStaff?'Pesan Masuk':'Hubungi Kami');
  }
  Future<void> openNotification(Map<String,dynamic> event)async{
      final eventId=int.tryParse('${event['id']??''}')??0;
@@ -1241,10 +1215,8 @@ class ChatPage extends StatelessWidget{
  @override Widget build(BuildContext context)=>CikokoLiveChat(api:api);
 }
 class AdminChatPage extends StatelessWidget{
- final ValueChanged<int>? onUnreadChanged;
- const AdminChatPage({super.key,this.onUnreadChanged});
- @override Widget build(BuildContext context)=>CikokoLiveChatInbox(
-  api:api,onUnreadChanged:onUnreadChanged);
+ const AdminChatPage({super.key});
+ @override Widget build(BuildContext context)=>CikokoLiveChatInbox(api:api);
 }
 class AdminReports extends StatefulWidget{
  final String? onlyKind;
