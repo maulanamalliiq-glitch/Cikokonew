@@ -14,11 +14,11 @@ on:
       version_name:
         description: 'Nama versi untuk build baru'
         type: string
-        default: '2.5.68'
+        default: '2.5.69'
       version_code:
         description: 'Harus lebih tinggi dari version code tertinggi di Play Console'
         type: string
-        default: '2568'
+        default: '2569'
 
 permissions:
   contents: read
@@ -71,7 +71,7 @@ jobs:
     name: Build APK ARM64 dan AAB signed
     needs: verify
     if: >-
-      github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && inputs.build_release) || (github.event_name == 'push' && github.event.head_commit.message == 'ci: build Cikokonew release 2568'))
+      github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && inputs.build_release) || (github.event_name == 'push' && github.event.head_commit.message == 'ci: build Cikokonew release 2569'))
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -80,8 +80,8 @@ jobs:
       CIKOKO_KEY_PASSWORD: ${{ secrets.CIKOKO_KEY_PASSWORD }}
       CIKOKO_KEY_ALIAS: androidkey
       EXPECTED_CERT: 394633E6A2F4C91C150D81B228908562D230D763031A0A0C205618B9D669D4E5
-      RELEASE_NAME: ${{ inputs.version_name || '2.5.68' }}
-      RELEASE_CODE: ${{ inputs.version_code || '2568' }}
+      RELEASE_NAME: ${{ inputs.version_name || '2.5.69' }}
+      RELEASE_CODE: ${{ inputs.version_code || '2569' }}
     steps:
       - uses: actions/checkout@v4
       - name: Periksa ketersediaan signing secrets
@@ -141,13 +141,46 @@ jobs:
       - name: Simpan APK dan AAB
         uses: actions/upload-artifact@v4
         with:
-          name: CikokoSmart-${{ inputs.version_code || '2568' }}-APK-AAB
+          name: CikokoSmart-${{ inputs.version_code || '2569' }}-APK-AAB
           path: dist/*
           if-no-files-found: error
           retention-days: 30
       - name: Hapus keystore sementara
         if: always()
         run: rm -f "$CIKOKO_KEYSTORE_PATH"
+
+  server-patch:
+    name: Paket pembaruan cPanel tanpa konfigurasi privat
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Siapkan patch mobile-api dari Cikokonew
+        run: |
+          set -euo pipefail
+          mkdir -p server-patch/mobile-api
+          cp cpanel/mobile-api/index.php server-patch/mobile-api/
+          cp cpanel/mobile-api/chat_v2548.php server-patch/mobile-api/
+          cp cpanel/mobile-api/chat_storage_2544.php server-patch/mobile-api/
+          cp cpanel/mobile-api/chat_hardcheck_2565.php server-patch/mobile-api/
+          cp cpanel/mobile-api/chat_runtime_2566.php server-patch/mobile-api/
+          cp cpanel/mobile-api/chat_inbox_2563.php server-patch/mobile-api/
+          cp cpanel/mobile-api/chat_offline_bot_2545.php server-patch/mobile-api/
+          cp cpanel/mobile-api/integrated_services.php server-patch/mobile-api/
+          cp cpanel/mobile-api/reviews.php server-patch/mobile-api/
+          cp cpanel/mobile-api/pppk_performance.php server-patch/mobile-api/
+          cp cpanel/mobile-api/pjlp_attendance_2557.php server-patch/mobile-api/
+          cp cpanel/mobile-api/pjlp_shifts_2558.php server-patch/mobile-api/
+          cp cpanel/mobile-api/pjlp_leave.php server-patch/mobile-api/
+          printf '%s\n' 'CikokoSmart 2569 mobile-api PATCH' '1. Backup public_html/mobile-api and its database first.' '2. Copy the CONTENTS of mobile-api/ into existing public_html/mobile-api/ (not the entire public_html).' '3. Do not erase private/, bootstrap.php, ahli-waris/config.php, database or uploaded files.' '4. Keep the production signing and admin credentials unchanged.' '5. Verify chat_v2548_status and authenticated chat_v2548_diagnostic before testing real chat.' '6. This patch does NOT repair an invalid database primary key automatically; if chat_id_auto_increment=false, inspect the existing schema and backup before migration.' > server-patch/README.txt
+      - name: Unggah patch API terpisah dari APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: CikokoSmart-2569-MobileAPI-Patch
+          path: server-patch/
+          if-no-files-found: error
+          retention-days: 30
 
   signing-readiness:
     name: Periksa signing secrets tanpa membuka nilainya
