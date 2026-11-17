@@ -280,7 +280,7 @@ class _PppkEditorState extends State<_PppkEditor>{
     final rowHeight=reportTitles.length==5?85.0:113.0;
     final pictureHeight=reportTitles.length==5?42.0:65.0;
     final endDay=DateTime(int.tryParse(yearTitle)??DateTime.now().year,monthNumber+1,0).day;
-    final reportDay=DateTime.now().day>endDay?endDay:DateTime.now().day;
+    final reportDay=endDay;
    pw.Widget progress(int i,int j){
     final key='${i+1}-${j+1}';
     final entry=i<entries.length&&entries[i] is Map?entries[i] as Map:{};
@@ -313,10 +313,10 @@ class _PppkEditorState extends State<_PppkEditor>{
      pw.Container(height:.8,color:PdfColors.black),
      pw.SizedBox(height:12),
      identity('NAMA',person),
-     identity('NIP PPPK',employeeNip),
+     identity('NI PPPK',employeeNip),
      identity('GOLONGAN','-'),
      identity('JABATAN',reportJabatan.isEmpty?'-':reportJabatan),
-     identity('UNIT KERJA','Kelurahan Cikoko'),
+     identity('UNIT KERJA','KELURAHAN CIKOKO KECAMATAN PANCORAN KOTA ADMINISTRASI JAKARTA SELATAN'),
      pw.SizedBox(height:17),
      pw.Table(border:tableBorder,columnWidths:{
       0:const pw.FixedColumnWidth(25),
