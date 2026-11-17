@@ -94,6 +94,24 @@ class _CikokoAdminPushPageState extends State<CikokoAdminPushPage>{
     if(notice!=null)Padding(padding:const EdgeInsets.only(bottom:10),
       child:V6Panel(child:Text(notice!,
         style:const TextStyle(color:V6.green,fontSize:11.5)))),
+    const V6Section(title:'Alur Notifikasi'), 
+    const V6Panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Text('1. Admin menyimpan pemberitahuan ke akun penerima.',
+        style:TextStyle(fontSize:11,color:V6.ink)),
+      SizedBox(height:5),
+      Text('2. Pesan langsung masuk ke lonceng aplikasi akun tersebut.',
+        style:TextStyle(fontSize:11,color:V6.ink)),
+      SizedBox(height:5),
+      Text('3. Cron mencoba mengirim push melalui Firebase ke perangkat terdaftar.',
+        style:TextStyle(fontSize:11,color:V6.ink)),
+      SizedBox(height:5),
+      Text('4. Pengguna mengetuk push untuk membuka detail atau halaman tujuan.',
+        style:TextStyle(fontSize:11,color:V6.ink)),
+      SizedBox(height:7),
+      Text('Diterima Firebase tidak sama dengan telah muncul atau dibaca di HP.',
+        style:TextStyle(fontSize:10.5,color:V6.secondary)),
+    ])),
+    const SizedBox(height:12),
     const V6Section(title:'Diagnostik Notifikasi'),
     V6Panel(child:Column(children:[
       Row(children:[
@@ -102,6 +120,11 @@ class _CikokoAdminPushPageState extends State<CikokoAdminPushPage>{
          'Antrean',Icons.schedule,V6.amber)),
        Expanded(child:_metric((stats['last_fcm_accepted']??0).toString(),
          'FCM diterima',Icons.check_circle_outline,V6.green)),
+      ]),
+      const SizedBox(height:9),
+      Row(children:[
+       Expanded(child:_metric((stats['last_failed']??0).toString(),'Gagal kirim',Icons.error_outline,V6.red)),
+       Expanded(child:_metric((stats['last_no_device']??0).toString(),'Tanpa token HP',Icons.phonelink_erase_outlined,V6.amber)),
       ]),
       const Divider(height:18),
       Row(children:[
