@@ -12,7 +12,27 @@ class _BrokenReviewApi extends CikokoApi {
   return {'ok':false,'error':'not ready'};
  }
 }
+class _ChangingReviewApi extends CikokoApi {
+ int calls=0;
+ @override Future<Map<String,dynamic>> call(String action,
+   {Map<String,dynamic>? body,bool authorized=false})async{
+  calls++;
+  return {'ok':true,'review_count':calls-1,'average_stars':calls==1?0:5,
+    'items':<Map<String,dynamic>>[]};
+ }
+}
 void main(){
+ testWidgets('Review count can reload latest stored number', (tester)async{
+  final api=_ChangingReviewApi();
+  await tester.pumpWidget(MaterialApp(home:Scaffold(
+   body:CikokoReviewSummary(api:api,onAll:(){}))));
+  await tester.pumpAndSettle();
+  expect(find.text('0 ulasan'),findsOneWidget);
+  await tester.tap(find.byKey(const Key('reviews_refresh')));
+  await tester.pumpAndSettle();
+  expect(find.text('1 ulasan'),findsOneWidget);
+ });
+
  testWidgets('Unavailable reviews show server error rather than claiming zero reviews',
    (tester)async{
   await tester.pumpWidget(MaterialApp(home:Scaffold(
