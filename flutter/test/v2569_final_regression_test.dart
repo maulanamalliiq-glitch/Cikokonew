@@ -33,7 +33,7 @@ void main(){
    expect(routes,contains('Kehadiran'));
    expect(routes,contains('Kinerja Bulanan'));
    expect(routes,contains('Cuti Pegawai'));
-   expect(routes,neverContains('Jadwal Piket & Dinas'));
+   expect(routes,isNot(contains('Jadwal Piket & Dinas')));
   }
  });
  testWidgets('Service without uploaded logo uses a descriptive category pictogram',(tester)async{
