@@ -197,6 +197,7 @@ jobs:
       - name: Verifikasi API, ulasan, dan chat tanpa kredensial
         run: |
           set -euo pipefail
+          failed=0
           for target in \
             'health|https://datawebs.my.id/mobile-api/index.php?action=health' \
             'review_public|https://datawebs.my.id/mobile-api/index.php?action=review_public' \
@@ -207,13 +208,16 @@ jobs:
             echo "$label HTTP $status"
             if [[ "$status" != 200 ]]; then
               echo "::warning::$label belum tersedia pada server publik (HTTP $status)"
-              exit 1
+              failed=1
+              continue
             fi
             python3 -c "import json; d=json.load(open('/tmp/cikoko-probe.json')); assert d.get('ok') is True" || {
               echo "::warning::$label tidak mengembalikan ok=true dari server"
-              exit 1
+              failed=1
+              continue
             }
           done
+          exit "$failed"
 
   signing-readiness:
     name: Periksa signing secrets tanpa membuka nilainya
