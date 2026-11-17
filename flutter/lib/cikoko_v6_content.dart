@@ -4,6 +4,7 @@ import 'cikoko_v6_showcase.dart';
 import 'cikoko_kelurahan_profile.dart';
 import 'role_catalog.dart';
 import 'integrated_services.dart';
+import 'push.dart';
 
 class V6ServicesPage extends StatefulWidget{
  final bool guest;
@@ -443,35 +444,136 @@ class V6AboutPage extends StatelessWidget{
    api:api,title:'Tentang Kami',navigate:navigate);
 }
 
-class V6NotificationPage extends StatelessWidget{
- final bool guest; final List<dynamic> events;
- final void Function(Map<String,dynamic>) onOpen; final VoidCallback login;
+// All notification types share one inbox. No personal data is broadcast here.
+String cikokoNotificationCategoryLabel(String category) {
+ switch(category){
+  case 'chat':return 'Pesan';
+  case 'surat':
+  case 'progres_surat':
+  case 'rt_rw_surat':
+  case 'rt_rw_status':return 'Pelayanan Surat';
+  case 'laporan_masuk':return 'Laporan';
+  case 'berita':return 'Berita';
+  case 'pengumuman':return 'Pengumuman';
+  case 'inovasi':return 'Inovasi';
+  default:return 'Informasi';
+ }
+}
+IconData cikokoNotificationCategoryIcon(String category) {
+ switch(category){
+  case 'chat':return Icons.chat_bubble_outline_rounded;
+  case 'surat':
+  case 'progres_surat':
+  case 'rt_rw_surat':
+  case 'rt_rw_status':return Icons.description_outlined;
+  case 'laporan_masuk':return Icons.assignment_turned_in_outlined;
+  case 'berita':return Icons.article_outlined;
+  case 'pengumuman':return Icons.campaign_outlined;
+  case 'inovasi':return Icons.auto_awesome_outlined;
+  default:return Icons.notifications_none_rounded;
+ }
+}
+class V6NotificationPage extends StatefulWidget{
+ final bool guest;
+ final List<dynamic> events;
+ final void Function(Map<String,dynamic>) onOpen;
+ final VoidCallback login;
+ final Future<void> Function()? onRefresh;
+ final Future<void> Function()? onReadAll;
  const V6NotificationPage({super.key,required this.guest,
-  required this.events,required this.onOpen,required this.login});
- @override Widget build(BuildContext context)=>ListView(padding:const EdgeInsets.all(14),children:[
-   const V6PageHeader(title:'Notifikasi',
-      description:'Pemberitahuan mengenai aktivitas dan pengajuan.',icon:Icons.notifications_none),
-   if(guest)V6Panel(child:Column(children:[
-     const Text('Masuk untuk membaca notifikasi Anda.'),
+   required this.events,required this.onOpen,required this.login,
+   this.onRefresh,this.onReadAll});
+ @override State<V6NotificationPage> createState()=>_V6NotificationPageState();
+}
+class _V6NotificationPageState extends State<V6NotificationPage>{
+ String filter='Semua';
+ bool busy=false;
+ Future<void> markAll()async{
+   if(busy||widget.onReadAll==null)return;
+   setState(()=>busy=true);
+   try{await widget.onReadAll!();}
+   finally{if(mounted)setState(()=>busy=false);}
+ }
+ @override Widget build(BuildContext context) {
+  final all=widget.events.whereType<Map>().map((e)=>Map<String,dynamic>.from(e)).toList();
+  all.sort((a,b)=>(int.tryParse('${b['id']}')??0).compareTo(int.tryParse('${a['id']}')??0));
+  final unread=all.where((e)=>!cikokoNotificationIsRead(e['is_read'])).length;
+  final filtered=all.where((e)=>filter=='Semua' ||
+    (filter=='Belum Dibaca'?!cikokoNotificationIsRead(e['is_read']):
+       cikokoNotificationIsRead(e['is_read']))).toList();
+  return RefreshIndicator(
+   onRefresh:widget.onRefresh??()async{},
+   child:ListView(key:const Key('cikoko_notification_inbox'),
+    padding:const EdgeInsets.all(14),children:[
+    const V6PageHeader(title:'Notifikasi',
+     description:'Seluruh pemberitahuan akun Anda, tersusun berdasarkan waktu.',
+     icon:Icons.notifications_none),
+    if(widget.guest)V6Panel(child:Column(children:[
+      const Text('Masuk untuk membaca notifikasi pribadi Anda.'),
+      const SizedBox(height:10),
+      FilledButton(onPressed:widget.login,child:const Text('Masuk')),
+    ]))
+    else...[
+     V6Panel(child:Row(children:[
+      const Icon(Icons.mark_email_unread_outlined,color:V6.blue,size:25),
+      const SizedBox(width:10),
+      Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Text('$unread belum dibaca',key:const Key('notification_unread_summary'),
+          style:const TextStyle(fontSize:14,fontWeight:FontWeight.w800,color:V6.ink)),
+        Text('${all.length} notifikasi terbaru di akun ini',
+          style:const TextStyle(fontSize:10.8,color:V6.secondary))
+      ])),
+      if(unread>0)TextButton.icon(key:const Key('notification_read_all'),
+        onPressed:busy?null:markAll,
+        icon:const Icon(Icons.done_all,size:17),
+        label:Text(busy?'Memproses…':'Tandai semua',style:const TextStyle(fontSize:11))),
+     ])),
      const SizedBox(height:10),
-     FilledButton(onPressed:login,child:const Text('Masuk')),
-   ]))
-   else if(events.isEmpty)const V6Panel(child:Text('Belum ada notifikasi.',
-     style:TextStyle(color:V6.secondary,fontSize:11.5)))
-   else for(final e in events)Padding(padding:const EdgeInsets.only(bottom:9),child:V6Panel(
-     padding:EdgeInsets.zero,child:ListTile(
-       onTap:()=>onOpen(Map<String,dynamic>.from(e)),
-       leading:CircleAvatar(backgroundColor:V6.pale,child:Icon(
-         (e['is_read']==true||(e['is_read']??0).toString()=='1')
-          ?Icons.notifications_none:Icons.notifications_active_outlined,color:V6.blue,size:19)),
-       title:Text((e['title']??'Pemberitahuan').toString(),
-         style:const TextStyle(fontSize:12.2,fontWeight:FontWeight.w800,color:V6.ink)),
-       subtitle:Text((e['message']??'').toString()+'\n'+cikokoDateOnly(e['created_at']??''),
-         maxLines:3,overflow:TextOverflow.ellipsis,
-         style:const TextStyle(fontSize:10.5,color:V6.secondary)),
-       trailing:const Icon(Icons.chevron_right_rounded,color:V6.blue,size:18),
-     ))),
- ]);
+     Wrap(spacing:7,runSpacing:4,children:[
+       for(final name in const ['Semua','Belum Dibaca','Sudah Dibaca'])
+         ChoiceChip(key:Key('notification_filter_$name'),
+           label:Text(name,style:const TextStyle(fontSize:11)),
+           selected:filter==name,onSelected:(_)=>setState(()=>filter=name)),
+     ]),
+     const SizedBox(height:11),
+     if(filtered.isEmpty)V6Panel(child:Text(
+       all.isEmpty?'Belum ada notifikasi untuk akun ini.':
+       filter=='Belum Dibaca'?'Semua notifikasi sudah dibaca.':
+       filter=='Sudah Dibaca'?'Belum ada notifikasi yang dibaca.':'Belum ada notifikasi.',
+       style:const TextStyle(color:V6.secondary,fontSize:12))),
+     for(final e in filtered)Padding(padding:const EdgeInsets.only(bottom:9),
+       child:V6Panel(padding:EdgeInsets.zero,child:ListTile(
+        key:Key('notification_event_${e['id']}'),
+        contentPadding:const EdgeInsets.symmetric(horizontal:11,vertical:5),
+        onTap:()=>widget.onOpen(e),
+        leading:CircleAvatar(
+         backgroundColor:cikokoNotificationIsRead(e['is_read'])?
+           const Color(0xFFF1F4F8):V6.pale,
+         child:Icon(cikokoNotificationCategoryIcon('${e['category']??''}'),
+          color:cikokoNotificationIsRead(e['is_read'])?V6.secondary:V6.blue,size:20)),
+        title:Text((e['title']??'Pemberitahuan').toString(),
+         maxLines:2,overflow:TextOverflow.ellipsis,
+         style:TextStyle(fontSize:12.5,
+          fontWeight:cikokoNotificationIsRead(e['is_read'])?FontWeight.w500:FontWeight.w800,
+          color:V6.ink)),
+        subtitle:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          const SizedBox(height:3),
+          Text((e['message']??'').toString(),maxLines:3,
+           overflow:TextOverflow.ellipsis,
+           style:const TextStyle(fontSize:10.8,color:V6.secondary)),
+          const SizedBox(height:6),
+          Text(cikokoNotificationCategoryLabel('${e['category']??''}')+
+            '  •  '+cikokoDateOnly(e['created_at']??'')+
+            (cikokoNotificationIsRead(e['is_read'])?'  •  Dibaca':'  •  Baru'),
+           style:TextStyle(fontSize:10,fontWeight:FontWeight.w600,
+            color:cikokoNotificationIsRead(e['is_read'])?V6.secondary:V6.blue)),
+        ]),
+        trailing:const Icon(Icons.chevron_right_rounded,color:V6.blue,size:18),
+       ))),
+    ],
+   ]),
+  );
+ }
 }
 
 class V6FormHeading extends StatelessWidget{
