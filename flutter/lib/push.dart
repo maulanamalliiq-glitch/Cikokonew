@@ -4,6 +4,14 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'api.dart';
 
+/// Shared unread rule for the bell, inbox and background polling.
+/// Server values can be bool, number or string, depending on the JSON source.
+bool cikokoNotificationIsRead(dynamic value) {
+  if(value==true || value==1)return true;
+  final normalized=(value??'').toString().toLowerCase().trim();
+  return normalized=='1'||normalized=='true';
+}
+
 String destinationForPushCategory(String category,{required bool isStaff}) {
   if(category=='chat')return isStaff?'Pesan Masuk':'Hubungi Kami';
   if(category=='rt_rw_surat'||category=='rt_rw_status')return isStaff?'Surat Wilayah':'Surat Pengantar RT/RW';
@@ -22,6 +30,7 @@ class PushService {
   final local=FlutterLocalNotificationsPlugin();
   StreamSubscription<String>? refresh;
   StreamSubscription<RemoteMessage>? incoming;
+  StreamSubscription<RemoteMessage>? opened;
   final Set<String> _seenEventIds={};
   bool _seeded=false;
   bool _initialized=false;
@@ -52,11 +61,12 @@ class PushService {
       if(t!=null)await register(t);
       refresh=FirebaseMessaging.instance.onTokenRefresh.listen(register);
       incoming=FirebaseMessaging.onMessage.listen((m) async {
-        final id=m.data['event_id'];
-        if(id is String && id.isNotEmpty){_seenEventIds.add(id);}
+        final id=(m.data['event_id']??'').toString();
+        // FCM and API polling can describe the same event. Notify only once.
+        final duplicate=id.isNotEmpty && !_seenEventIds.add(id);
         final n=m.notification;
-        if(n!=null&&_initialized) {
-          await local.show(m.hashCode,n.title,n.body,
+        if(n!=null&&_initialized&&!duplicate) {
+          await local.show(int.tryParse(id)??m.hashCode,n.title,n.body,
             const NotificationDetails(android:AndroidNotificationDetails('cikoko_updates_v2',
               'Aktivitas dan Pelayanan Cikoko',importance:Importance.max,priority:Priority.high,
               playSound:true,enableVibration:true)),
@@ -64,7 +74,7 @@ class PushService {
         }
         onRefresh();
       });
-      FirebaseMessaging.onMessageOpenedApp.listen((message){onOpen?.call(message);onRefresh();});
+      opened=FirebaseMessaging.onMessageOpenedApp.listen((message){onOpen?.call(message);onRefresh();});
       final initial=await FirebaseMessaging.instance.getInitialMessage();
       if(initial!=null)onOpen?.call(initial);
     }catch(_){ /* Server polling still works while application is open. */ }
@@ -75,7 +85,7 @@ class PushService {
     if(events.isEmpty)return;
     final nowIds=events.map((e)=>'${e['id']??''}').where((id)=>id.isNotEmpty).toSet();
     if(!_seeded){_seenEventIds.addAll(nowIds);_seeded=true;return;}
-    final newer=events.where((e)=>!_seenEventIds.contains('${e['id']??''}') && '${e['is_read']??0}'!='1' && e['is_read']!=true).take(3).toList();
+    final newer=events.where((e)=>!_seenEventIds.contains('${e['id']??''}') && !cikokoNotificationIsRead(e['is_read'])).take(3).toList();
     _seenEventIds.addAll(nowIds);
     if(_seenEventIds.length>350){_seenEventIds.clear();_seenEventIds.addAll(nowIds);}
     if(!_initialized)return;
@@ -88,5 +98,5 @@ class PushService {
     }
   }
   Future<void> register(String token) async {if(api.token!=null){try{await api.call('device',body:{'fcm_token':token});}catch(_){}}}
-  void dispose(){refresh?.cancel();incoming?.cancel();}
+  void dispose(){refresh?.cancel();incoming?.cancel();opened?.cancel();}
 }
