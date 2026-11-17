@@ -54,6 +54,27 @@ function cikoko_integrated_dispatch(string $action,string $method):void {
     // Must authenticate on BOTH read and write, because the user asked to
     // show this list only for logged-in accounts.
     $user=mobile_auth();
+    if($action==='integrated_services_logo' && $method==='GET'){
+        $id=trim((string)($_GET['id']??''));
+        if(!preg_match('/^[a-zA-Z0-9_-]{1,45}$/D',$id))mobile_error('Layanan tidak ditemukan',404);
+        $match=null;
+        foreach(cikoko_integrated_read() as $entry){
+            if(($entry['id']??'')===$id){$match=$entry;break;}
+        }
+        if(!$match || (($match['active']??true)===false && ($user['user_role']??'')!=='admin'))
+            mobile_error('Logo tidak tersedia',404);
+        $url=(string)($match['logo_url']??'');
+        $path=(string)(parse_url($url,PHP_URL_PATH)??'');
+        $name=basename($path);
+        if(!preg_match('/^[a-f0-9]{32}\\.(jpg|png|webp)$/D',$name))
+            mobile_error('Logo belum diunggah melalui admin',404);
+        $file=__DIR__.'/service-logos/'.$name;
+        if(!is_file($file))mobile_error('Berkas logo belum tersedia',404);
+        $mime=['jpg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp'][strtolower(pathinfo($name,PATHINFO_EXTENSION))];
+        header('Content-Type: '.$mime);
+        header('Cache-Control: private, max-age=3600');
+        readfile($file);exit;
+    }
     if($action==='integrated_services_logo_upload'){
         if($method!=='POST')mobile_error('Metode tidak tersedia.',405);
         if(($user['user_role']??'')!=='admin')mobile_error('Hanya Admin Utama dapat mengunggah logo.',403);
