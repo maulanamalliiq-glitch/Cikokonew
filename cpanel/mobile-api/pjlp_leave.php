@@ -100,11 +100,11 @@ function pjlp_store_photo(string $encoded):string {
 function pjlp_mobile_dispatch(string $action,string $method):void {
  $actor=mobile_auth();$db=mobile_db();$uid=(string)$actor['user_id'];
  $role=(string)$actor['user_role'];$admin=pjlp_admin($actor);
- $staff=in_array($role,['ppsu','pjlp','lurah','asn','admin','admin_kelurahan'],true);
+ $staff=in_array($role,['ppsu','pjlp','pppk','lurah','asn','admin','admin_kelurahan'],true);
  if(!$staff)pjlp_fail('Fitur ini hanya untuk petugas PPSU dan pejabat berwenang',403);
- $self=in_array($role,['ppsu','pjlp'],true)?pjlp_employee($db,$uid):null;
+ $self=in_array($role,['ppsu','pjlp','pppk'],true)?pjlp_employee($db,$uid):null;
  if($action==='pjlp_me'&&$method==='GET'){
-  if(!in_array($role,['ppsu','pjlp'],true))pjlp_fail('Hanya untuk akun PPSU',403);
+  if(!in_array($role,['ppsu','pjlp','pppk'],true))pjlp_fail('Hanya untuk akun PPSU',403);
   $balance=null;
   if($self){
    $s=$db->prepare("SELECT b.allowance_days,b.adjustment_days,COALESCE((SELECT SUM(r.requested_days) FROM pjlp_leave_requests r WHERE r.employee_id=b.employee_id AND r.leave_year=b.leave_year AND r.status='approved'),0) used_days,COALESCE((SELECT SUM(r.requested_days) FROM pjlp_leave_requests r WHERE r.employee_id=b.employee_id AND r.leave_year=b.leave_year AND r.status IN ('pending_admin','pending_supervisor','pending_lurah')),0) held_days FROM pjlp_leave_balances b WHERE b.employee_id=? AND b.leave_year=?");
@@ -128,7 +128,7 @@ function pjlp_mobile_dispatch(string $action,string $method):void {
   mobile_json(['ok'=>true,'blocked_dates'=>array_keys($blocked)]);
  }
  if($action==='pjlp_list'&&$method==='GET'){
-  if(in_array($role,['ppsu','pjlp'],true)){
+  if(in_array($role,['ppsu','pjlp','pppk'],true)){
    if(!$self)mobile_json(['ok'=>true,'items'=>[]]);
    $s=$db->prepare('SELECT r.* FROM pjlp_leave_requests r WHERE r.employee_id=? ORDER BY r.id DESC LIMIT 150');
    $s->execute([(int)$self['id']]);
@@ -146,7 +146,7 @@ function pjlp_mobile_dispatch(string $action,string $method):void {
   foreach(db_read('portal_users') as $p){
    if(!($p['active']??false))continue;
    $row=['user_id'=>(string)($p['id']??''),'name'=>(string)($p['name']??''),'role'=>(string)($p['role']??'')];
-   if($row['role']==='pjlp')$accounts[]=$row;
+   if(in_array($row['role'],['pjlp','pppk'],true))$accounts[]=$row;
    if(in_array($row['role'],['asn','admin_kelurahan'],true))$supervisors[]=$row;
    if($row['role']==='lurah')$lurah[]=$row;
   }
@@ -165,7 +165,7 @@ function pjlp_mobile_dispatch(string $action,string $method):void {
   if(!$userId||!$phl||!pjlp_date($hired)||$hired>date('Y-m-d')||!$super)pjlp_fail('Akun PJLP, ID PHL, tanggal mulai bekerja, dan atasan wajib diisi');
   $found=null;$superOk=false;
   foreach(db_read('portal_users') as $p){
-   if((string)($p['id']??'')===$userId&&($p['active']??false)&&($p['role']??'')==='pjlp')$found=$p;
+   if((string)($p['id']??'')===$userId&&($p['active']??false)&&in_array(($p['role']??''),['pjlp','pppk'],true))$found=$p;
    if((string)($p['id']??'')===$super&&($p['active']??false)&&in_array($p['role']??'', ['asn','admin_kelurahan'],true))$superOk=true;
   }
   if(!$found||!$superOk)pjlp_fail('Akun PJLP atau atasan tidak ditemukan/aktif');
@@ -234,7 +234,7 @@ function pjlp_mobile_dispatch(string $action,string $method):void {
   mobile_json(['ok'=>true,'profile_url'=>'https://datawebs.my.id/mobile-api/pjlp_profile.php?id='.$token]);
  }
  if($action==='pjlp_apply'&&$method==='POST'){
-  if(!in_array($role,['ppsu','pjlp'],true)||!$self)pjlp_fail('Admin harus mendaftarkan akun PPSU Anda terlebih dahulu',403);
+  if(!in_array($role,['ppsu','pjlp','pppk'],true)||!$self)pjlp_fail('Admin harus mendaftarkan akun PPSU Anda terlebih dahulu',403);
   $b=mobile_body();$a=pjlp_date((string)($b['start_date']??''));$z=pjlp_date((string)($b['end_date']??''));
   if(!$a||!$z||$z<$a||$a->format('Y')!==$z->format('Y')||$z->diff($a)->days>90)pjlp_fail('Rentang tanggal cuti tidak valid (maksimal 90 hari, satu tahun kalender)');
   $reason=mobile_text($b['reason']??'',1000);$addr=mobile_text($b['leave_address']??'',500);$phone=mobile_text($b['phone']??'',40);
