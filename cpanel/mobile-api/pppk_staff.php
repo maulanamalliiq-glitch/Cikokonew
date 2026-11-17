@@ -139,7 +139,7 @@ function pppk_staff_dispatch(string $action,string $method):void {
  $actor=mobile_auth();$role=(string)$actor['user_role'];$uid=(string)$actor['user_id'];
  $admin=in_array($role,['admin','admin_kelurahan'],true);
  $worker=$role==='pppk';
- $supervisor=$role==='asn';
+ $supervisor=in_array($role,['asn','admin_kelurahan'],true);
  $lurah=$role==='lurah';
  if(!$worker&&!$admin&&!$supervisor&&!$lurah)mobile_error('Hanya akun PPPK dan pejabat berwenang.',403);
  $db=mobile_db();pppk_staff_schema($db);
