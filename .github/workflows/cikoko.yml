@@ -169,15 +169,19 @@ jobs:
           cp cpanel/mobile-api/chat_offline_bot_2545.php server-patch/mobile-api/
           cp cpanel/mobile-api/integrated_services.php server-patch/mobile-api/
           cp cpanel/mobile-api/reviews.php server-patch/mobile-api/
+          cp cpanel/mobile-api/boarding_houses.php server-patch/mobile-api/
+          cp cpanel/mobile-api/pppk_staff.php server-patch/mobile-api/
+          mkdir -p server-patch/sql
+          cp cpanel/mobile-api/migrate_pppk_staff_2570.sql server-patch/sql/
           cp cpanel/mobile-api/pppk_performance.php server-patch/mobile-api/
           cp cpanel/mobile-api/pjlp_attendance_2557.php server-patch/mobile-api/
           cp cpanel/mobile-api/pjlp_shifts_2558.php server-patch/mobile-api/
           cp cpanel/mobile-api/pjlp_leave.php server-patch/mobile-api/
-          printf '%s\n' 'CikokoSmart 2569 mobile-api PATCH' '1. Backup public_html/mobile-api and its database first.' '2. Copy the CONTENTS of mobile-api/ into existing public_html/mobile-api/ (not the entire public_html).' '3. Do not erase private/, bootstrap.php, ahli-waris/config.php, database or uploaded files.' '4. Keep the production signing and admin credentials unchanged.' '5. Verify chat_v2548_status and authenticated chat_v2548_diagnostic before testing real chat.' '6. This patch does NOT repair an invalid database primary key automatically; if chat_id_auto_increment=false, inspect the existing schema and backup before migration.' > server-patch/README.txt
+          printf '%s\n' 'CikokoSmart 2570 mobile-api PATCH' '1. Backup public_html/mobile-api and its database first.' '2. Copy the CONTENTS of mobile-api/ into existing public_html/mobile-api/ (not the entire public_html).' '3. Do not erase private/, bootstrap.php, ahli-waris/config.php, database or uploaded files.' '4. Keep the production signing and admin credentials unchanged.' '5. Verify chat_v2548_status and authenticated chat_v2548_diagnostic before testing real chat.' '7. Import sql/migrate_pppk_staff_2570.sql after a database backup; never import schema.sql over production.' '8. Verify review_public returns ok=true; use admin action review_admin only with valid token.' '6. This patch does NOT repair an invalid database primary key automatically; if chat_id_auto_increment=false, inspect the existing schema and backup before migration.' > server-patch/README.txt
       - name: Unggah patch API terpisah dari APK
         uses: actions/upload-artifact@v4
         with:
-          name: CikokoSmart-2569-MobileAPI-Patch
+          name: CikokoSmart-2570-MobileAPI-Patch
           path: server-patch/
           if-no-files-found: error
           retention-days: 30
