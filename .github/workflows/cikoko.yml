@@ -186,6 +186,34 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  production-probe:
+    name: Hardcheck endpoint publik server aktif (read-only)
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Verifikasi API, ulasan, dan chat tanpa kredensial
+        run: |
+          set -euo pipefail
+          for target in \
+            'health|https://datawebs.my.id/mobile-api/index.php?action=health' \
+            'review_public|https://datawebs.my.id/mobile-api/index.php?action=review_public' \
+            'chat_v2548_status|https://datawebs.my.id/mobile-api/chat_v2548.php?action=chat_v2548_status'; do
+            label="${target%%|*}"
+            url="${target#*|}"
+            status=$(curl -sSL --max-time 18 -o /tmp/cikoko-probe.json -w '%{http_code}' "$url")
+            echo "$label HTTP $status"
+            if [[ "$status" != 200 ]]; then
+              echo "::warning::$label belum tersedia pada server publik (HTTP $status)"
+              exit 1
+            fi
+            python3 -c "import json; d=json.load(open('/tmp/cikoko-probe.json')); assert d.get('ok') is True" || {
+              echo "::warning::$label tidak mengembalikan ok=true dari server"
+              exit 1
+            }
+          done
+
   signing-readiness:
     name: Periksa signing secrets tanpa membuka nilainya
     if: github.event_name != 'pull_request'
