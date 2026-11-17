@@ -166,6 +166,18 @@ class _CikokoLiveChatState extends State<CikokoLiveChat> with WidgetsBindingObse
    }
   }
  }
+ Future<void> checkServer()async{
+   try{
+     await widget.api.call('chat_v2548_status');
+     final check=await widget.api.call('chat_v2548_selfcheck');
+     if(!mounted)return;
+     setState(()=>error=check['chat_ready']==true
+       ?'Endpoint chat tersambung. Jika tetap gagal, admin perlu memeriksa log hosting dan otorisasi akun.'
+       :'Penyimpanan chat belum siap (kode '+(check['code']??'CHAT_NOT_READY').toString()+'). Admin perlu memperbaiki struktur tabel setelah backup.');
+   }catch(e){
+     if(mounted)setState(()=>error='Pemeriksaan server chat gagal: '+e.toString()+'. Perbarui mobile-api di hosting terlebih dahulu.');
+   }
+ }
  // Only show confirmed writes from the API: no misleading unsent bubbles.
  void showConfirmed(Map<String,dynamic> result,
    {required String message,required bool photoSent}){
@@ -339,7 +351,11 @@ class _CikokoLiveChatState extends State<CikokoLiveChat> with WidgetsBindingObse
     const SizedBox(width:7),
     Expanded(child:Text(error!,style:const TextStyle(
      color:V6.red,fontSize:11))),
-    TextButton(onPressed:reload,child:const Text('Coba Lagi')),
+    Column(mainAxisSize:MainAxisSize.min,children:[
+      TextButton(onPressed:reload,child:const Text('Coba Lagi')),
+      TextButton(key:const Key('chat_server_selfcheck'),onPressed:checkServer,
+       child:const Text('Cek Server')),
+     ]),
    ])),
   Expanded(child:RefreshIndicator(onRefresh:reload,
    child:ListView.builder(controller:scroll,key:const Key('cikoko_live_chat'),
