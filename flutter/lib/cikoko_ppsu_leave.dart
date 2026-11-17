@@ -20,7 +20,7 @@ class _LeaveState extends State<CikokoPpsuLeaveHub> {
  Map<String,dynamic> profile={},adminData={};
  List<dynamic> requests=[],officials=[];
  bool get admin=>widget.role=='admin'||widget.role=='admin_kelurahan';
- bool get ppsu=>widget.role=='ppsu'||widget.role=='pjlp'||widget.role=='pppk';
+ bool get ppsu=>widget.role=='ppsu'||widget.role=='pjlp';
  String get userId=>(widget.api.profile?['id']??'').toString();
  @override void initState(){super.initState();reload();}
  Future<void> reload()async{
