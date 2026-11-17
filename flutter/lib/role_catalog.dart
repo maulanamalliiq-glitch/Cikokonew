@@ -57,6 +57,7 @@ const roleFeatures = <String,RoleFeature>{
   'accounts_manage': RoleFeature('Kelola Akun Petugas','Tambah akun Ketua/Bendahara RT/RW dan petugas lainnya','Kelola Akun Petugas',capability:'role:manage'),
   'push_manage': RoleFeature('Push Notifikasi','Kirim notifikasi dan pantau antrean Firebase','Push Notifikasi',capability:'content:create'),
   'pages_manage': RoleFeature('Kelola Semua Halaman','Pusat CMS beranda, berita, profil, inovasi dan seluruh konten publik','Kelola Semua Halaman',capability:'content:create'),
+  'reviews_manage': RoleFeature('Rekap Ulasan','Detail penilaian pengguna dan cetak PDF','Rekap Ulasan',capability:'content:create'),
   'services_manage': RoleFeature('Kelola Layanan Terpadu','Atur logo, judul, keterangan dan tautan layanan warga','Kelola Layanan Terpadu',capability:'role:manage'),
   'bendahara_manage': RoleFeature('Manajemen Bendahara RT/RW','Khusus Admin Utama: akun, wilayah, status Bendahara RT dan RW','Manajemen Bendahara RT/RW',capability:'role:manage'),
   'monitor': RoleFeature('Monitoring Wilayah','Ringkasan seluruh laporan wilayah','Monitoring Wilayah',connected:false),
@@ -72,8 +73,8 @@ const roleFeatures = <String,RoleFeature>{
   'profile': RoleFeature('Profil Akun','Identitas dan data akun','Profil'),
 };
 const roleMenus = <String,List<String>>{
- 'admin':['pjlp_2557','performance_pppk','leave_admin','push_manage','pages_manage','bendahara_manage','accounts_manage','services_manage','lpj_rt','lpj_rw','wilayah_ketua','surat_wilayah','verify_waris','verify_kegiatan','chat_admin','news_add','announce_add','archive_add','archive_list','role_manage','news','announcements','gallery','services'],
- 'admin_kelurahan':['performance_pppk','leave_admin','leave_approval','push_manage','pages_manage','surat_wilayah','verify','archive_add','archive_list','news_add','announce_add','chat_admin','news','announcements','services'],
+ 'admin':['reviews_manage','pjlp_2557','performance_pppk','leave_admin','push_manage','pages_manage','bendahara_manage','accounts_manage','services_manage','lpj_rt','lpj_rw','wilayah_ketua','surat_wilayah','verify_waris','verify_kegiatan','chat_admin','news_add','announce_add','archive_add','archive_list','role_manage','news','announcements','gallery','services'],
+ 'admin_kelurahan':['reviews_manage','performance_pppk','leave_admin','leave_approval','push_manage','pages_manage','surat_wilayah','verify','archive_add','archive_list','news_add','announce_add','chat_admin','news','announcements','services'],
  'lurah':['leave_approval','verify','archive_list','approval','monitor','protap','performance','news','announcements'],
  'asn':['pjlp_2557','leave_approval','verify','archive_list','monitor','kegiatan','news','announcements'],
  'pppk':['attendance_staff','performance_pppk','leave_pjlp','kegiatan','history','news'],
