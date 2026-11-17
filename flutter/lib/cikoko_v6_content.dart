@@ -453,6 +453,9 @@ String cikokoNotificationCategoryLabel(String category) {
   case 'rt_rw_surat':
   case 'rt_rw_status':return 'Pelayanan Surat';
   case 'laporan_masuk':return 'Laporan';
+  case 'leave':return 'Cuti PJLP';
+  case 'pppk_leave':return 'Cuti PPPK';
+  case 'pppk_performance':return 'Kinerja PPPK';
   case 'berita':return 'Berita';
   case 'pengumuman':return 'Pengumuman';
   case 'inovasi':return 'Inovasi';
@@ -467,6 +470,9 @@ IconData cikokoNotificationCategoryIcon(String category) {
   case 'rt_rw_surat':
   case 'rt_rw_status':return Icons.description_outlined;
   case 'laporan_masuk':return Icons.assignment_turned_in_outlined;
+  case 'leave':
+  case 'pppk_leave':return Icons.event_available_outlined;
+  case 'pppk_performance':return Icons.assessment_outlined;
   case 'berita':return Icons.article_outlined;
   case 'pengumuman':return Icons.campaign_outlined;
   case 'inovasi':return Icons.auto_awesome_outlined;
