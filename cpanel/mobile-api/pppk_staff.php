@@ -262,7 +262,7 @@ function pppk_staff_dispatch(string $action,string $method):void {
   $sql='SELECT r.*,s.allowance_days FROM pppk_staff_leave_requests r LEFT JOIN pppk_staff_leave_settings s
     ON s.user_id=r.user_id AND s.leave_year=r.leave_year';
   $args=[];
-  if($supervisor){$sql.=' WHERE r.supervisor_user_id=?';$args[]=$uid;}
+  if($supervisor&&!$admin){$sql.=' WHERE r.supervisor_user_id=?';$args[]=$uid;}
   $sql.=' ORDER BY r.id DESC LIMIT 200';
   $q=$db->prepare($sql);$q->execute($args);
   $rows=$q->fetchAll(PDO::FETCH_ASSOC);
