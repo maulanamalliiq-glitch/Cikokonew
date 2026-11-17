@@ -70,7 +70,7 @@ jobs:
   build:
     name: Build APK ARM64 dan AAB signed
     needs: verify
-    if: github.event_name == 'workflow_dispatch' && inputs.build_release && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && inputs.build_release) || (github.event_name == 'push' && github.event.head_commit.message == 'ci: build Cikokonew release 2567'))
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -79,8 +79,8 @@ jobs:
       CIKOKO_KEY_PASSWORD: ${{ secrets.CIKOKO_KEY_PASSWORD }}
       CIKOKO_KEY_ALIAS: androidkey
       EXPECTED_CERT: 394633E6A2F4C91C150D81B228908562D230D763031A0A0C205618B9D669D4E5
-      RELEASE_NAME: ${{ inputs.version_name }}
-      RELEASE_CODE: ${{ inputs.version_code }}
+      RELEASE_NAME: ${{ inputs.version_name || '2.5.67' }}
+      RELEASE_CODE: ${{ inputs.version_code || '2567' }}
     steps:
       - uses: actions/checkout@v4
       - name: Periksa ketersediaan signing secrets
