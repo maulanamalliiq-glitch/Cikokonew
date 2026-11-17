@@ -857,6 +857,25 @@ class _HomeState extends State<HomePage> {
     if(!mounted)return;
     final category='${event['category']??''}';
     if(category=='chat'){await navigateChatEvent(eventId);return;}
+    if(category=='pppk_leave'){
+      if(role=='pppk')switchTo('Cuti PPPK');
+      else if(['admin','admin_kelurahan','asn','lurah'].contains(role))
+        switchTo('Kelola Cuti PPPK');
+      else switchTo('Notifikasi');
+      return;
+    }
+    if(category=='pppk_performance'){
+      switchTo(['pppk','admin','admin_kelurahan'].contains(role)?'Kinerja PPPK':'Notifikasi');
+      return;
+    }
+    if(category=='leave'){
+      if(role=='pjlp'||role=='ppsu')switchTo('Cuti PPSU');
+      else if(role=='admin'||role=='admin_kelurahan')switchTo('Kelola Cuti PPSU');
+      else if(role=='asn'||role=='lurah')switchTo('Persetujuan Cuti PPSU');
+      else switchTo('Notifikasi');
+      return;
+    }
+
     if(category=='rt_rw_surat'||category=='rt_rw_status'){switchTo(isStaff?'Surat Wilayah':'Surat Pengantar RT/RW');return;}
     if(category=='surat'||category=='progres_surat'||category=='laporan_masuk'){
       switchTo(isStaff?'Verifikasi Laporan':'Riwayat');return;
