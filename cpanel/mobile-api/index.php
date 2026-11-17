@@ -13,6 +13,15 @@ set_exception_handler(static function(Throwable $exception):void {
 });
 $action=(string)($_GET['action']??'');
 $method=(string)($_SERVER['REQUEST_METHOD']??'GET');
+// Public, safe deployment marker. This proves which PHP code is installed;
+// it does not claim database writes, push notifications, or chat are working.
+if($action==='deployment_status'&&$method==='GET'){
+    echo json_encode(['ok'=>true,'service'=>'Cikoko Mobile API',
+      'api_release'=>'2571','source'=>'Cikokonew/main',
+      'features'=>['public_reviews','public_services','verified_kos','chat_selfcheck','pppk_staff_separate'],
+      'database_verified'=>false],JSON_UNESCAPED_UNICODE);
+    exit;
+}
 if($action==='health'){
     $files=[
         'website_lib'=>is_file(dirname(__DIR__).'/lib.php'),
