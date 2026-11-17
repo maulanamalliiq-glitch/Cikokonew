@@ -85,3 +85,27 @@ function cikoko_chat_runtime_2566_health(PDO $db,array $actor):array {
   'server_time'=>gmdate('Y-m-d\TH:i:s\Z')
  ];
 }
+
+/** Privacy-safe, authenticated readiness check for resident and staff alike. */
+function cikoko_chat_runtime_2570_selfcheck(PDO $db):array {
+ $names=['mobile_chat','mobile_chat_receipts','mobile_events'];
+ $missing=[];
+ foreach($names as $name){
+  if(!cikoko_chat_runtime_2566_table($db,$name))$missing[]=$name;
+ }
+ $autoId=false;
+ if(!in_array('mobile_chat',$missing,true)){
+  try{
+   $r=$db->query("SHOW COLUMNS FROM mobile_chat LIKE 'id'")->fetch(PDO::FETCH_ASSOC);
+   $autoId=!!$r && strtoupper((string)($r['Key']??''))==='PRI' &&
+     stripos((string)($r['Extra']??''),'auto_increment')!==false;
+  }catch(Throwable $e){error_log('[chat selfcheck] '.$e->getMessage());}
+ }
+ return [
+  'ok'=>true,
+  'chat_ready'=>$missing===[] && $autoId,
+  'chat_api_version'=>'2570',
+  'code'=>$missing!==[]?'CHAT_TABLES_MISSING':(!$autoId?'CHAT_ID_SCHEMA':'CHAT_READY'),
+  'missing_table_count'=>count($missing),
+ ];
+}
