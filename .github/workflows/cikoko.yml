@@ -14,11 +14,11 @@ on:
       version_name:
         description: 'Nama versi untuk build baru'
         type: string
-        default: '2.5.69'
+        default: '2.5.70'
       version_code:
         description: 'Harus lebih tinggi dari version code tertinggi di Play Console'
         type: string
-        default: '2569'
+        default: '2570'
 
 permissions:
   contents: read
@@ -72,7 +72,7 @@ jobs:
     name: Build APK ARM64 dan AAB signed
     needs: verify
     if: >-
-      github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && inputs.build_release) || (github.event_name == 'push' && github.event.head_commit.message == 'ci: build Cikokonew release 2569'))
+      github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && inputs.build_release) || (github.event_name == 'push' && github.event.head_commit.message == 'ci: build Cikokonew release 2570'))
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -81,8 +81,8 @@ jobs:
       CIKOKO_KEY_PASSWORD: ${{ secrets.CIKOKO_KEY_PASSWORD }}
       CIKOKO_KEY_ALIAS: androidkey
       EXPECTED_CERT: 394633E6A2F4C91C150D81B228908562D230D763031A0A0C205618B9D669D4E5
-      RELEASE_NAME: ${{ inputs.version_name || '2.5.69' }}
-      RELEASE_CODE: ${{ inputs.version_code || '2569' }}
+      RELEASE_NAME: ${{ inputs.version_name || '2.5.70' }}
+      RELEASE_CODE: ${{ inputs.version_code || '2570' }}
     steps:
       - uses: actions/checkout@v4
       - name: Periksa ketersediaan signing secrets
@@ -142,7 +142,7 @@ jobs:
       - name: Simpan APK dan AAB
         uses: actions/upload-artifact@v4
         with:
-          name: CikokoSmart-${{ inputs.version_code || '2569' }}-APK-AAB
+          name: CikokoSmart-${{ inputs.version_code || '2570' }}-APK-AAB
           path: dist/*
           if-no-files-found: error
           retention-days: 30
