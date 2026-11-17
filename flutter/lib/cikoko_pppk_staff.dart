@@ -270,7 +270,10 @@ class _LeaveApprovalState extends State<CikokoPppkLeaveApprovalPage>{
      Text('Alasan: '+(row['reason']??'').toString()),
      Text('Status: '+(row['status']??'').toString()),
      if((admin&&row['status']=='pending_admin')||
-        (widget.role=='asn'&&row['status']=='pending_supervisor')||
+        (['asn','admin_kelurahan'].contains(widget.role)&&
+         row['status']=='pending_supervisor'&&
+         (row['supervisor_user_id']??'').toString()==
+          (widget.api.profile?['id']??widget.api.profile?['user_id']??'').toString())||
         (widget.role=='lurah'&&row['status']=='pending_lurah'))
       Row(children:[
        TextButton(onPressed:()=>decision(int.parse(row['id'].toString()),'approve'),
