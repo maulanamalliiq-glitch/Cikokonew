@@ -41,6 +41,7 @@ import 'boarding_houses_page.dart';
 import 'lpj_pages.dart';
 import 'cikoko_ppsu_leave.dart' show CikokoPpsuLeaveHub;
 import 'cikoko_pppk_performance.dart';
+import 'cikoko_pppk_staff.dart';
 import 'cikoko_reviews.dart';
 import 'cikoko_pjlp_2557_page.dart';
 
@@ -524,6 +525,16 @@ class _HomeState extends State<HomePage> {
   Widget _page(){switch(section){
     case 'Dashboard':return home();
      case 'Modul Dinamis':return CikokoDynamicModulesPage(api:api,role:role);
+    case 'Kehadiran PPPK':
+      return role=='pppk'?CikokoPppkAttendancePage(api:api):
+        const Center(child:Text('Menu ini hanya untuk akun PPPK.'));
+    case 'Cuti PPPK':
+      return role=='pppk'?CikokoPppkLeavePage(api:api):
+        const Center(child:Text('Menu ini hanya untuk akun PPPK.'));
+    case 'Kelola Cuti PPPK':
+      return ['admin','admin_kelurahan','asn','lurah'].contains(role)
+        ?CikokoPppkLeaveApprovalPage(api:api,role:role)
+        :const Center(child:Text('Hanya pejabat berwenang.'));
     case 'Absensi dan Kinerja PJLP':
       return CikokoPjlp2557Page(api: api, role: role);
     case 'Kinerja PPPK':
