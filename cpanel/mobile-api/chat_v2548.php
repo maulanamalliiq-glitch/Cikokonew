@@ -55,6 +55,10 @@ if($staff&&in_array($action,['chat_v2548_send','chat_v2548_upload'],true)){
  }
 }
 // Avoid DDL on routine chat requests; use explicit staff diagnostics.
+if($action==='chat_v2548_selfcheck'){
+ if($method!=='GET')mobile_error('Metode tidak didukung.',405);
+ mobile_json(cikoko_chat_runtime_2570_selfcheck($db));
+}
 if($action==='chat_v2548_diagnostic'){
  if($method!=='GET')mobile_error('Metode tidak didukung.',405);
  mobile_json(cikoko_chat_runtime_2566_health($db,$user));
