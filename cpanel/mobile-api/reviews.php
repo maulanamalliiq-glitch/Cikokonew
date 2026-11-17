@@ -4,17 +4,14 @@ declare(strict_types=1);
  * full identity visible to admin only. No public phone, email or user IDs.
  */
 function cikoko_reviews_schema(PDO $db):void {
-    $db->exec("CREATE TABLE IF NOT EXISTS mobile_app_reviews(
-      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-      user_id VARCHAR(80) NOT NULL UNIQUE,
-      user_role VARCHAR(40) NOT NULL,
-      display_name VARCHAR(120) NOT NULL,
-      stars TINYINT UNSIGNED NOT NULL,
-      review_text VARCHAR(1200) NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      INDEX idx_updated(updated_at)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    // Never run CREATE TABLE on every unauthenticated read. Admin imports
+    // migrate_reviews_2571.sql once, after a database backup.
+    try{
+        $db->query('SELECT id,user_id,stars,review_text FROM mobile_app_reviews LIMIT 0');
+    }catch(Throwable $e){
+        error_log('[Cikoko REVIEW_SCHEMA] '.$e->getMessage());
+        mobile_error('Ulasan belum siap pada server (REVIEW_SCHEMA). Admin perlu memasang migrasi database.',503);
+    }
 }
 function cikoko_reviews_dispatch(string $action,string $method):void {
     $db=mobile_db();
@@ -30,6 +27,7 @@ function cikoko_reviews_dispatch(string $action,string $method):void {
     $actor=mobile_auth();
     $uid=(string)$actor['user_id'];
     if($action==='review_submit' && $method==='POST'){
+        cikoko_rate_limit($db,'review_submit',$uid,12,3600);
         $v=mobile_body();
         $stars=filter_var($v['stars']??null,FILTER_VALIDATE_INT);
         $comment=mobile_text($v['review']??'',1200);
