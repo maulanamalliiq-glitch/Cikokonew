@@ -32,7 +32,7 @@ class _CikokoPjlp2557PageState extends State<CikokoPjlp2557Page> {
   String month = DateTime.now().toUtc().add(const Duration(hours: 7))
       .toIso8601String().substring(0, 7);
 
-  bool get isPjlp => (widget.role == 'pjlp' || widget.role == 'pppk');
+  bool get isPjlp => widget.role == 'pjlp';
   bool get isAdmin => widget.role == 'admin';
   bool get approved => record['approved'] == true;
   String get serverDate => '${record['server_date'] ?? ''}';
