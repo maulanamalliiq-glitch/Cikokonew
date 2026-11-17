@@ -289,6 +289,7 @@ class _CivicProfileState extends State<CivicProfilePage>{
         ('Notifikasi','Pemberitahuan aktivitas aplikasi',Icons.notifications_none,'Notifikasi'),
         ('Tentang Kami','Informasi Kelurahan Cikoko',Icons.info_outline,'Tentang Kami'),
         ('Bantuan & FAQ','Hubungi petugas kelurahan',Icons.help_outline,'Hubungi Kami'),
+         ('Ulasan & Penilaian','Beri bintang dan tulis pengalaman aplikasi',Icons.star_rate_outlined,'Ulasan Aplikasi'),
        ])...[
         ListTile(
          dense:true,visualDensity:VisualDensity.compact,
