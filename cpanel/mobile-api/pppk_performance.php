@@ -23,6 +23,21 @@ function pppk_schema(PDO $db):void {
  UNIQUE KEY uq_photo_slot(report_id,section_no,period_no)
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 }
+/** Private notifications for PPPK monthly report state transitions. */
+function pppk_perf_event(PDO $db,string $userId,string $title,string $message):void{
+ $q=$db->prepare("INSERT INTO mobile_events(category,title,message,audience,recipient)
+  VALUES('pppk_performance',?,?,'personal',?)");
+ $q->execute([mobile_text($title,240),mobile_text($message,2000),$userId]);
+}
+function pppk_perf_admin_ids():array{
+ $ids=['admin'=>true];
+ foreach(db_read('portal_users') as $user){
+  if(!is_array($user)||empty($user['active']))continue;
+  $id=(string)($user['id']??'');
+  if($id!==''&&in_array((string)($user['role']??''),['admin','admin_kelurahan'],true))$ids[$id]=true;
+ }
+ return array_keys($ids);
+}
 function pppk_row(PDO $db,int $id):array {
  $s=$db->prepare('SELECT * FROM pppk_monthly_reports WHERE id=?');$s->execute([$id]);
  return $s->fetch(PDO::FETCH_ASSOC)?:[];
@@ -113,8 +128,22 @@ function pppk_dispatch(string $action,string $method):void {
   if($admin)mobile_error('Hanya PPPK yang mengirim laporan',403);
   $id=(int)(mobile_body()['id']??0);$r=pppk_row($db,$id);pppk_access($r,$actor,false);
   if(!in_array($r['status'],['draft','rejected'],true))mobile_error('Laporan sudah dikirim',409);
-  $q=$db->prepare("UPDATE pppk_monthly_reports SET status='pending_admin',submitted_at=NOW(),reviewed_at=NULL,reviewer_id=NULL,review_note=NULL,approved_token=NULL WHERE id=?");
-  $q->execute([$id]);mobile_json(['ok'=>true]);
+  $db->beginTransaction();
+  try{
+   $q=$db->prepare("UPDATE pppk_monthly_reports SET status='pending_admin',
+     submitted_at=NOW(),reviewed_at=NULL,reviewer_id=NULL,
+     review_note=NULL,approved_token=NULL
+     WHERE id=? AND status IN ('draft','rejected')");
+   $q->execute([$id]);
+   if($q->rowCount()!==1)mobile_error('Laporan sudah dikirim.',409);
+   pppk_perf_event($db,$uid,'Kinerja PPPK terkirim',
+     'Laporan bulan '.$r['report_month'].' menunggu pemeriksaan admin.');
+   foreach(pppk_perf_admin_ids() as $adminId)
+    pppk_perf_event($db,$adminId,'Laporan Kinerja PPPK Baru',
+      'Kinerja bulanan PPPK #'.$id.' menunggu pemeriksaan admin.');
+   $db->commit();
+  }finally{if($db->inTransaction())$db->rollBack();}
+  mobile_json(['ok'=>true]);
  }
  if($action==='pppk_review'&&$method==='POST'){
   if(!$admin)mobile_error('Hanya Admin yang menyetujui',403);
@@ -124,8 +153,21 @@ function pppk_dispatch(string $action,string $method):void {
   $note=mb_substr(trim((string)($v['note']??'')),0,1000);
   if($decision==='rejected'&&$note==='')mobile_error('Alasan penolakan wajib diisi');
   $token=$decision==='approved'?bin2hex(random_bytes(24)):null;
-  $s=$db->prepare("UPDATE pppk_monthly_reports SET status=?,reviewed_at=NOW(),reviewer_id=?,review_note=?,approved_token=? WHERE id=? AND status='pending_admin'");
-  $s->execute([$decision,$uid,$note,$token,$id]);mobile_json(['ok'=>true]);
+  $db->beginTransaction();
+  try{
+   $s=$db->prepare("UPDATE pppk_monthly_reports SET status=?,
+     reviewed_at=NOW(),reviewer_id=?,review_note=?,approved_token=?
+     WHERE id=? AND status='pending_admin'");
+   $s->execute([$decision,$uid,$note,$token,$id]);
+   if($s->rowCount()!==1)mobile_error('Laporan tidak lagi menunggu persetujuan.',409);
+   pppk_perf_event($db,(string)$r['user_id'],
+     $decision==='approved'?'Kinerja PPPK disetujui':'Kinerja PPPK perlu diperbaiki',
+     'Laporan bulan '.$r['report_month'].($decision==='approved'
+      ?' sudah disetujui. PDF verifikasi tersedia.'
+      :' ditolak. Buka laporan kinerja untuk membaca catatan admin.'));
+   $db->commit();
+  }finally{if($db->inTransaction())$db->rollBack();}
+  mobile_json(['ok'=>true]);
  }
  mobile_error('Aksi kinerja PPPK tidak tersedia',404);
 }
