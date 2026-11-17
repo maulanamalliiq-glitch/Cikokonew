@@ -329,9 +329,16 @@ class _V6BoardingHouseDirectoryPageState extends State<V6BoardingHouseDirectoryP
                               color: V6.blue, size: 35))),
                 ),
               const SizedBox(height: 8),
-              Text((row['name'] ?? 'Rumah kos').toString(),
-                  style: const TextStyle(fontSize: 15, color: V6.ink,
-                      fontWeight: FontWeight.w900)),
+              Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
+                Flexible(child:Text((row['name'] ?? 'Rumah kos').toString(),
+                    style: const TextStyle(fontSize: 15, color: V6.ink,
+                        fontWeight: FontWeight.w900))),
+                const SizedBox(width:8),
+                if(row['verified']==true)
+                  const Tooltip(message:'Terverifikasi oleh Kelurahan Cikoko',
+                    child:Icon(Icons.verified_rounded,key:Key('kos_verified_badge'),
+                      color:Color(0xff16a34a),size:24)),
+              ]),
               const SizedBox(height: 5),
               Text('RT ' + (row['rt'] ?? '—').toString() +
                   ' / RW ' + (row['rw'] ?? '—').toString(),
