@@ -1,0 +1,149 @@
+name: Cikoko - Pemeriksaan dan Build APK AAB
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      build_release:
+        description: 'Build APK ARM64 dan AAB dengan keystore lama'
+        type: boolean
+        default: false
+      version_name:
+        description: 'Nama versi untuk build baru'
+        type: string
+        default: '2.5.67'
+      version_code:
+        description: 'Harus lebih tinggi dari version code tertinggi di Play Console'
+        type: string
+        default: '2567'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cikoko-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Periksa kode Flutter dan PHP
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, pdo_mysql, mbstring
+          coverage: none
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.5'
+          channel: stable
+          cache: true
+      - name: Validasi identitas aplikasi
+        run: python3 scripts/check_identity.py
+      - name: Pemeriksaan PHP dan regresi chat serta shift PJLP
+        run: |
+          set -euo pipefail
+          find cpanel qa tests -name '*.php' -print0 | xargs -0 -n1 php -l
+          php qa/chat_runtime_2566_test.php
+          php qa/chat_inbox_2563_test.php
+          php qa/chat_hardcheck_2565_test.php
+          php qa/pjlp_shift_recap_2558_test.php
+      - name: Siapkan Flutter dan uji
+        working-directory: flutter
+        run: |
+          set -euo pipefail
+          flutter create --platforms=android --project-name=cikoko .
+          flutter pub get
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+          flutter test
+
+  build:
+    name: Build APK ARM64 dan AAB signed
+    needs: verify
+    if: github.event_name == 'workflow_dispatch' && inputs.build_release && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      CIKOKO_KEYSTORE_PATH: ${{ github.workspace }}/flutter/android/cikoko_upload.jks
+      CIKOKO_STORE_PASSWORD: ${{ secrets.CIKOKO_STORE_PASSWORD }}
+      CIKOKO_KEY_PASSWORD: ${{ secrets.CIKOKO_KEY_PASSWORD }}
+      CIKOKO_KEY_ALIAS: androidkey
+      EXPECTED_CERT: 394633E6A2F4C91C150D81B228908562D230D763031A0A0C205618B9D669D4E5
+      RELEASE_NAME: ${{ inputs.version_name }}
+      RELEASE_CODE: ${{ inputs.version_code }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Periksa ketersediaan signing secrets
+        env:
+          CIKOKO_KEYSTORE_B64: ${{ secrets.CIKOKO_KEYSTORE_B64 }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$CIKOKO_KEYSTORE_B64" || -z "$CIKOKO_STORE_PASSWORD" || -z "$CIKOKO_KEY_PASSWORD" ]]; then
+            echo '::error::Tambahkan tiga signing secrets lama pada Settings > Secrets and variables > Actions di Cikokonew. Jangan membuat keystore baru.'
+            exit 1
+          fi
+          umask 077
+          printf '%s' "$CIKOKO_KEYSTORE_B64" | base64 --decode > "$CIKOKO_KEYSTORE_PATH"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Verifikasi sertifikat lama
+        run: |
+          set -euo pipefail
+          actual=$(keytool -list -v -keystore "$CIKOKO_KEYSTORE_PATH" -storepass:env CIKOKO_STORE_PASSWORD -alias "$CIKOKO_KEY_ALIAS" | sed -n 's/^[[:space:]]*SHA256: //p' | tr -d '[:space:]:' | tr '[:lower:]' '[:upper:]')
+          test "$actual" = "$EXPECTED_CERT" || { echo '::error::Keystore tidak cocok dengan sertifikat Cikoko lama'; exit 1; }
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.5'
+          channel: stable
+          cache: true
+      - name: Atur versi build dan siapkan Android
+        run: |
+          set -euo pipefail
+          python3 scripts/set_build_version.py
+          cd flutter
+          flutter create --platforms=android --project-name=cikoko .
+          flutter pub get
+          cd ..
+          python3 scripts/check_identity.py
+      - name: Build dan verifikasi AAB serta APK
+        working-directory: flutter
+        run: |
+          set -euo pipefail
+          flutter build appbundle --release
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          aab=build/app/outputs/bundle/release/app-release.aab
+          jarsigner -verify "$aab" > "$RUNNER_TEMP/aab-check.txt" 2>&1
+          grep -q 'jar verified' "$RUNNER_TEMP/aab-check.txt"
+          actual=$(keytool -printcert -jarfile "$aab" | sed -n 's/^[[:space:]]*SHA256: //p' | tr -d '[:space:]:' | tr '[:lower:]' '[:upper:]')
+          test "$actual" = "$EXPECTED_CERT"
+          cp "$aab" "$GITHUB_WORKSPACE/dist/CikokoSmart-v$RELEASE_NAME-$RELEASE_CODE-PLAY.aab"
+          flutter build apk --release --split-per-abi --target-platform android-arm64
+          apk=build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          apksigner="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner"
+          signed="$GITHUB_WORKSPACE/dist/CikokoSmart-v$RELEASE_NAME-$RELEASE_CODE-arm64.apk"
+          "$apksigner" sign --ks "$CIKOKO_KEYSTORE_PATH" --ks-key-alias "$CIKOKO_KEY_ALIAS" --ks-pass env:CIKOKO_STORE_PASSWORD --key-pass env:CIKOKO_KEY_PASSWORD --out "$signed" "$apk"
+          "$apksigner" verify --verbose --print-certs "$signed" > "$RUNNER_TEMP/apk-check.txt"
+          actual=$(grep -iE 'certificate.*SHA.?256' "$RUNNER_TEMP/apk-check.txt" | grep -oiE '[0-9a-f]{64}|([0-9a-f]{2}:){31}[0-9a-f]{2}' | head -n1 | tr -d ':' | tr '[:lower:]' '[:upper:]')
+          test "$actual" = "$EXPECTED_CERT"
+      - name: Simpan APK dan AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: CikokoSmart-${{ inputs.version_code }}-APK-AAB
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Hapus keystore sementara
+        if: always()
+        run: rm -f "$CIKOKO_KEYSTORE_PATH"

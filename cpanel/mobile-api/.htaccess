@@ -1,0 +1,12 @@
+Options -Indexes
+<FilesMatch "^(bootstrap|cron_dispatch|schema|config\.local)\." >
+Require all denied
+</FilesMatch>
+
+<FilesMatch "\.sql$">
+Require all denied
+</FilesMatch>
+
+<FilesMatch "\.(sql|log)$">
+Require all denied
+</FilesMatch>

@@ -1,0 +1,419 @@
+import 'package:flutter/material.dart';
+import 'api.dart';
+
+/// Hanya Admin Utama yang mendapat menu ini. Server tetap melakukan
+/// verifikasi role=admin sebelum membaca atau membuat akun.
+class AdminAccountsPage extends StatefulWidget {
+  final CikokoApi api;
+  /// Tampilan khusus Bendahara memakai API dan autentikasi Admin Utama
+  /// yang sudah ada. Tidak mengubah login atau aturan server.
+  final bool bendaharaOnly;
+  const AdminAccountsPage({
+    super.key,
+    required this.api,
+    this.bendaharaOnly = false,
+  });
+
+  @override
+  State<AdminAccountsPage> createState() => _AdminAccountsPageState();
+}
+
+class _AdminAccountsPageState extends State<AdminAccountsPage> {
+  final name = TextEditingController();
+  final username = TextEditingController();
+  final password = TextEditingController();
+  final phone = TextEditingController();
+  final email = TextEditingController();
+  final rt = TextEditingController();
+  final rw = TextEditingController();
+  final formKey = GlobalKey<FormState>();
+
+  Map<String, String> roles = {};
+  List<Map<String, dynamic>> accounts = [];
+  String? selectedRole;
+  String? error;
+  bool busy = false;
+  bool loading = true;
+  bool showForm = true;
+
+  bool get needsRt => selectedRole == 'rt' || selectedRole == 'bendahara_rt';
+  bool get needsRw => needsRt ||
+      selectedRole == 'rw' ||
+      selectedRole == 'bendahara_rw' ||
+      selectedRole == 'lmk';
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  @override
+  void dispose() {
+    for (final controller in [name, username, password, phone, email, rt, rw]) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> load() async {
+    try {
+      final res = await widget.api.call('accounts_list');
+      if (!mounted) return;
+      final roleMap = Map<String, dynamic>.from(res['roles'] as Map? ?? {});
+      setState(() {
+        roles = roleMap.map((k, v) => MapEntry(k, v.toString()))
+          ..remove('admin')
+          ..remove('warga');
+        if (widget.bendaharaOnly) {
+          // Pilihan dibatasi untuk dua peran resmi yang benar-benar
+          // dikembalikan server; jangan pernah membuat role lokal palsu.
+          roles.removeWhere((key, _) =>
+              key != 'bendahara_rt' && key != 'bendahara_rw');
+        }
+        accounts = (res['items'] as List? ?? [])
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .where((account) =>
+                !widget.bendaharaOnly ||
+                account['role'] == 'bendahara_rt' ||
+                account['role'] == 'bendahara_rw')
+            .toList();
+        if (!roles.containsKey(selectedRole)) {
+          selectedRole = roles.containsKey('bendahara_rt')
+              ? 'bendahara_rt'
+              : (roles.isEmpty ? null : roles.keys.first);
+        }
+        loading = false;
+        error = null;
+      });
+    } catch (e) {
+      if (mounted) setState(() { loading = false; error = '$e'; });
+    }
+  }
+
+  String? nonEmpty(String? value) =>
+      (value ?? '').trim().isEmpty ? 'Wajib diisi' : null;
+
+  Future<void> create() async {
+    if (busy || selectedRole == null || !roles.containsKey(selectedRole)) return;
+    if (widget.bendaharaOnly &&
+        selectedRole != 'bendahara_rt' &&
+        selectedRole != 'bendahara_rw') return;
+    if (!formKey.currentState!.validate()) return;
+    setState(() => busy = true);
+    try {
+      await widget.api.call('accounts_create', body: {
+        'name': name.text.trim(),
+        'username': username.text.trim(),
+        'password': password.text,
+        'role': selectedRole,
+        'phone': phone.text.trim(),
+        'email': email.text.trim(),
+        'rt': needsRt ? rt.text.trim() : '',
+        'rw': needsRw ? rw.text.trim() : '',
+      });
+      if (!mounted) return;
+      name.clear();
+      username.clear();
+      password.clear();
+      phone.clear();
+      email.clear();
+      rt.clear();
+      rw.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Akun petugas berhasil dibuat.')));
+      await load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal membuat akun: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> changeStatus(Map<String,dynamic> account) async {
+    final active=account['active']==true;
+    final confirm=await showDialog<bool>(context:context,builder:(dialog)=>AlertDialog(
+      title:Text(active?'Nonaktifkan akun?':'Aktifkan akun?'),
+      content:Text('${account['name']} (${account['username']})\n${active?'Pegawai akan keluar dan tidak bisa login hingga diaktifkan kembali.':'Pegawai akan bisa login kembali.'}'),
+      actions:[TextButton(onPressed:()=>Navigator.pop(dialog,false),child:const Text('Batal')),
+        FilledButton(onPressed:()=>Navigator.pop(dialog,true),child:Text(active?'Nonaktifkan':'Aktifkan'))]));
+    if(confirm!=true)return;
+    try{
+      await widget.api.call('accounts_status_update',body:{'id':account['id'],'active':!active});
+      if(!mounted)return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(active?'Akun dinonaktifkan.':'Akun diaktifkan.')));
+      await load();
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Gagal mengubah status: ${cikokoFormalMessage(e)}')));}
+  }
+
+  Future<void> deleteAccount(Map<String,dynamic> account) async {
+    final controller=TextEditingController();
+    final username=(account['username']??'').toString();
+    final confirm=await showDialog<bool>(context:context,builder:(dialog)=>AlertDialog(
+      title:const Text('Hapus akun permanen?'),
+      content:Column(mainAxisSize:MainAxisSize.min,children:[
+        Text('Akun ${account['name']} akan dihapus dan tidak bisa dipulihkan melalui aplikasi. Riwayat laporan tetap disimpan. Ketik username untuk konfirmasi:'),
+        const SizedBox(height:8),SelectableText(username),
+        TextField(controller:controller,decoration:const InputDecoration(labelText:'Ketik username')),
+      ]),
+      actions:[TextButton(onPressed:()=>Navigator.pop(dialog,false),child:const Text('Batal')),
+        FilledButton(onPressed:()=>Navigator.pop(dialog,controller.text.trim()==username),child:const Text('Hapus Permanen'))]));
+    controller.dispose();
+    if(confirm!=true)return;
+    try{
+      await widget.api.call('accounts_delete',body:{'id':account['id'],'confirm_username':username});
+      if(!mounted)return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Akun berhasil dihapus permanen.')));
+      await load();
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Gagal menghapus: ${cikokoFormalMessage(e)}')));}
+  }
+
+  Future<void> resetPassword(Map<String,dynamic> account) async {
+    final controller=TextEditingController();
+    bool visible=false;
+    await showDialog<void>(context:context,builder:(dialog)=>StatefulBuilder(
+      builder:(dialog,refresh)=>AlertDialog(
+        title:Text('Reset Password: ${account['name'] ?? 'Pegawai'}'),
+        content:Column(mainAxisSize:MainAxisSize.min,children:[
+          const Text('Masukkan password baru khusus akun ini. Minimal 5 karakter, bebas huruf, angka, atau simbol. Sesi lama akan dikeluarkan.',style:TextStyle(fontSize:13)),
+          const SizedBox(height:12),
+          TextField(controller:controller,obscureText:!visible,
+            decoration:InputDecoration(labelText:'Password baru',border:const OutlineInputBorder(),
+              suffixIcon:IconButton(icon:Icon(visible?Icons.visibility_off:Icons.visibility),
+                onPressed:()=>refresh(()=>visible=!visible)))),
+        ]),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(dialog),child:const Text('Batal')),
+          FilledButton(onPressed:()async{
+            final pass=controller.text;
+            if(pass.length<5||pass.length>128){
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Minimal 5 karakter, maksimal 128 karakter.')));return;
+            }
+            try{
+              await widget.api.call('accounts_password_reset',body:{'id':account['id'],'new_password':pass});
+              if(!mounted)return;
+              if(dialog.mounted)Navigator.pop(dialog);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Password berhasil direset. Sampaikan secara pribadi.')));
+            }catch(e){
+              if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Gagal reset: ${cikokoFormalMessage(e)}')));
+            }
+          },child:const Text('Reset Password')),
+        ],
+      ),
+    ));
+    controller.dispose();
+  }
+
+  Future<void> updateEmail(Map<String,dynamic> account) async {
+    final controller=TextEditingController(text:(account['email']??'').toString());
+    await showDialog<void>(context:context,builder:(dialog)=>AlertDialog(
+      title:Text('Email OTP: '+(account['name']??'Petugas').toString()),
+      content:Column(mainAxisSize:MainAxisSize.min,children:[
+        TextField(controller:controller,keyboardType:TextInputType.emailAddress,
+          decoration:const InputDecoration(
+            labelText:'Email aktif milik pegawai',border:OutlineInputBorder())),
+        const SizedBox(height:8),
+        const Text('Pastikan alamat email benar-benar dapat diakses oleh pemilik akun. OTP akan dikirim ke alamat ini.',
+          style:TextStyle(fontSize:12,color:Colors.blueGrey)),
+      ]),
+      actions:[
+        TextButton(onPressed:()=>Navigator.pop(dialog),child:const Text('Batal')),
+        FilledButton(onPressed:()async{
+          try{
+            await widget.api.call('accounts_email_update',body:{
+              'id':account['id'],'email':controller.text.trim(),
+            });
+            if(!mounted)return;
+            if(dialog.mounted)Navigator.pop(dialog);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content:Text('Email OTP pegawai berhasil diperbarui.')));
+            await load();
+          }catch(e){
+            if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content:Text('Gagal memperbarui email: '+cikokoFormalMessage(e))));
+          }
+        },child:const Text('Simpan')),
+      ],
+    ));
+    controller.dispose();
+  }
+
+  InputDecoration decoration(String label, {String? hint}) =>
+      InputDecoration(
+        labelText: label,
+        hintText: hint,
+        border: const OutlineInputBorder(),
+        isDense: true,
+      );
+
+  Widget field(TextEditingController controller, String label,
+      {String? hint, bool required = true, bool secret = false,
+      TextInputType? keyboard}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextFormField(
+        controller: controller,
+        obscureText: secret,
+        keyboardType: keyboard,
+        decoration: decoration(label, hint: hint),
+        validator: required ? nonEmpty : null,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) return const Center(child: CircularProgressIndicator());
+    if (error != null) {
+      return Center(child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text('Gagal membuka Kelola Akun: $error', textAlign: TextAlign.center),
+          const SizedBox(height: 12),
+          FilledButton(onPressed: load, child: const Text('Coba Lagi')),
+        ]),
+      ));
+    }
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(
+          widget.bendaharaOnly ? 'Manajemen Bendahara RT/RW' : 'Kelola Akun Petugas',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          widget.bendaharaOnly
+              ? 'Khusus Admin Utama. Buat akun Bendahara RT/RW sesuai wilayah '
+                'dan lihat status aktifnya. Login, akun lain, serta data LPJ '
+                'tidak berubah.'
+              : 'Hanya Admin Utama dapat membuat akun dan menetapkan '
+                'jabatan resmi Ketua/Bendahara RT/RW. '
+                'Username dan password disampaikan secara pribadi.',
+          style: const TextStyle(color: Colors.blueGrey, fontSize: 12),
+        ),
+        if (widget.bendaharaOnly && roles.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              'Peran Bendahara belum tersedia dari API cPanel. '
+              'Pembuatan akun dinonaktifkan hingga server mengirimkan '
+              'bendahara_rt atau bendahara_rw.',
+              style: TextStyle(color: Colors.deepOrange),
+            ),
+          ),
+        const SizedBox(height: 12),
+        Card(child: Column(children: [
+          ListTile(
+            title: const Text('Tambah Akun'),
+            subtitle: Text(widget.bendaharaOnly
+                ? 'Buat akun Bendahara RT atau Bendahara RW'
+                : 'Petugas baru, termasuk Bendahara RT dan RW'),
+            trailing: Icon(showForm ? Icons.expand_less : Icons.expand_more),
+            onTap: () => setState(() => showForm = !showForm),
+          ),
+          if (showForm && roles.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+              child: Form(key: formKey, child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  field(name, 'Nama lengkap'),
+                  field(username, 'Username', hint: 'Minimal 4 karakter'),
+                  field(password, 'Password awal',
+                      secret: true, hint: 'Minimal 5 karakter'),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedRole,
+                    isExpanded: true,
+                    decoration: decoration('Peran akun'),
+                    items: roles.entries
+                        .map((e) => DropdownMenuItem(
+                              value: e.key,
+                              child: Text(e.value, overflow: TextOverflow.ellipsis)))
+                        .toList(),
+                    onChanged: busy ? null : (v) => setState(() => selectedRole = v),
+                  ),
+                  const SizedBox(height: 12),
+                  if (needsRt) field(rt, 'RT', hint: 'Contoh: 001',
+                      keyboard: TextInputType.number),
+                  if (needsRw) field(rw, 'RW', hint: 'Contoh: 001',
+                      keyboard: TextInputType.number),
+                  field(phone, 'Nomor telepon (opsional)', required: false,
+                      keyboard: TextInputType.phone),
+                  field(email, selectedRole == 'ppsu' ? 'Email PPSU (wajib untuk OTP)' : 'Email (opsional)',
+                      required: selectedRole == 'ppsu',
+                      keyboard: TextInputType.emailAddress),
+                  const SizedBox(height: 4),
+                  FilledButton.icon(
+                    onPressed: busy ? null : create,
+                    icon: busy
+                        ? const SizedBox(height: 16, width: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.person_add_alt_1),
+                    label: Text(busy
+                        ? 'Menyimpan...'
+                        : (widget.bendaharaOnly
+                            ? 'Buat Akun Bendahara'
+                            : 'Buat Akun Petugas')),
+                  ),
+                ],
+              )),
+            ),
+        ])),
+        const SizedBox(height: 14),
+        Row(children: [
+          Expanded(child: Text(
+              widget.bendaharaOnly
+                  ? 'Daftar Bendahara RT/RW'
+                  : 'Daftar Akun Terdaftar',
+              style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.bold))),
+          IconButton(tooltip: 'Muat ulang', onPressed: load,
+              icon: const Icon(Icons.refresh)),
+        ]),
+        if (accounts.isEmpty)
+          Text(widget.bendaharaOnly
+              ? 'Belum ada akun Bendahara RT/RW yang terdaftar.'
+              : 'Belum ada akun petugas.'),
+        for (final account in accounts)
+          Card(child: ListTile(
+            dense: true,
+            leading: Icon(account['active'] == true
+                ? Icons.verified_user_outlined
+                : Icons.person_off_outlined),
+            title: Text(account['name']?.toString() ?? ''),
+            subtitle: Text(
+              '${account['username'] ?? ''} • '
+              '${roles[account['role']] ?? account['role']}'
+              '${(account['rt'] ?? '').toString().isNotEmpty ? ' • RT ${account['rt']}' : ''}'
+              '${(account['rw'] ?? '').toString().isNotEmpty ? ' / RW ${account['rw']}' : ''}',
+            ),
+            trailing: Row(mainAxisSize:MainAxisSize.min,children:[
+              PopupMenuButton<String>(
+                tooltip:'Kelola status akun',
+                icon:const Icon(Icons.more_vert),
+                onSelected:(value){
+                  if(value=='status')changeStatus(account);
+                  if(value=='delete')deleteAccount(account);
+                },
+                itemBuilder:(_)=>[
+                  PopupMenuItem(value:'status',child:Text(account['active']==true?'Nonaktifkan Akun':'Aktifkan Akun')),
+                  const PopupMenuItem(value:'delete',child:Text('Hapus Permanen',style:TextStyle(color:Colors.red))),
+                ],
+              ),
+              IconButton(tooltip:'Reset password pegawai',icon:const Icon(Icons.lock_reset_outlined),
+                onPressed:()=>resetPassword(account)),
+              IconButton(tooltip:'Atur email untuk OTP',icon:const Icon(Icons.alternate_email),
+                onPressed:()=>updateEmail(account)),
+              Text(account['active'] == true ? 'Aktif' : 'Nonaktif',
+                style: const TextStyle(fontSize: 11)),
+            ]),
+          )),
+      ],
+    );
+  }
+}
