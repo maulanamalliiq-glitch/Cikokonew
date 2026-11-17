@@ -487,6 +487,15 @@ if($action==='event_read'&&$method==='POST'){
  $db->prepare('INSERT IGNORE INTO mobile_event_reads(user_id,event_id) VALUES(?,?)')->execute([(string)$uid,$id]);
  mobile_json(['ok'=>true,'message'=>'Notifikasi telah dibaca.']);
 }
+// One account can mark only its own personal notifications as read.
+if($action==='event_read_all'&&$method==='POST'){
+ $q=$db->prepare('INSERT IGNORE INTO mobile_event_reads(user_id,event_id)
+   SELECT ?,e.id FROM mobile_events e
+   WHERE e.audience="personal" AND e.recipient=?');
+ $q->execute([(string)$uid,(string)$uid]);
+ mobile_json(['ok'=>true,'marked_count'=>$q->rowCount(),
+   'message'=>'Notifikasi akun Anda telah ditandai dibaca.']);
+}
 if($action==='chat_send'&&$method==='POST'){
  if(cikoko_chat_eligible_staff($u))mobile_error('Petugas harus membalas melalui menu Pesan Masuk.',403);
  $b=mobile_body();$message=mobile_text($b['message']??'',2500);if(mobile_strlen($message)<2)mobile_error('Pesan terlalu pendek',422);
