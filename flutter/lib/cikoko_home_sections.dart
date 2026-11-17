@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'api.dart';
 import 'cikoko_v6_showcase.dart';
+import 'integrated_services.dart';
 
 /// Home-only sections. These use real status and service links supplied by
 /// the existing Cikoko API; no sample counters or invented service URLs.
@@ -73,9 +74,7 @@ class V6IntegratedServiceGrid extends StatelessWidget{
       itemBuilder:(ctx,i){
        final service=visible[i];
        final title=(service['title']??'Layanan').toString();
-       final logo=(service['logo_url']??'').toString().trim();
-       final uri=Uri.tryParse(logo);
-       final hasLogo=uri!=null&&uri.scheme=='https'&&uri.host.isNotEmpty;
+       // Use uploaded image or a category pictogram.
        return Material(color:Colors.white,borderRadius:V6.radius(12),
         child:InkWell(
          key:Key('v6_integrated_'+i.toString()),
@@ -89,11 +88,7 @@ class V6IntegratedServiceGrid extends StatelessWidget{
           child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
            SizedBox(
             width:46,height:46,
-            child:hasLogo
-             ?Image.network(logo,fit:BoxFit.contain,
-               errorBuilder:(_,__,___)=>const Icon(
-                 Icons.account_balance_outlined,color:V6.blue,size:30))
-             :const Icon(Icons.account_balance_outlined,color:V6.blue,size:30)),
+            child:CikokoServiceLogo(entry:service,size:46)),
            const SizedBox(height:5),
            Text(title,maxLines:2,textAlign:TextAlign.center,
              overflow:TextOverflow.ellipsis,
