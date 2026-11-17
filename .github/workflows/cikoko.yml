@@ -14,11 +14,11 @@ on:
       version_name:
         description: 'Nama versi untuk build baru'
         type: string
-        default: '2.5.70'
+        default: '2.5.71'
       version_code:
         description: 'Harus lebih tinggi dari version code tertinggi di Play Console'
         type: string
-        default: '2570'
+        default: '2571'
 
 permissions:
   contents: read
@@ -59,6 +59,7 @@ jobs:
           php qa/chat_hardcheck_2565_test.php
           php qa/pjlp_shift_recap_2558_test.php
           php qa/pppk_staff_2570_test.php
+          php qa/hardcheck_routes_2571_test.php
       - name: Siapkan Flutter dan uji
         working-directory: flutter
         run: |
@@ -72,7 +73,7 @@ jobs:
     name: Build APK ARM64 dan AAB signed
     needs: verify
     if: >-
-      github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && inputs.build_release) || (github.event_name == 'push' && github.event.head_commit.message == 'ci: build Cikokonew release 2570'))
+      github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && inputs.build_release) || (github.event_name == 'push' && github.event.head_commit.message == 'ci: build Cikokonew release 2571'))
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -81,8 +82,8 @@ jobs:
       CIKOKO_KEY_PASSWORD: ${{ secrets.CIKOKO_KEY_PASSWORD }}
       CIKOKO_KEY_ALIAS: androidkey
       EXPECTED_CERT: 394633E6A2F4C91C150D81B228908562D230D763031A0A0C205618B9D669D4E5
-      RELEASE_NAME: ${{ inputs.version_name || '2.5.70' }}
-      RELEASE_CODE: ${{ inputs.version_code || '2570' }}
+      RELEASE_NAME: ${{ inputs.version_name || '2.5.71' }}
+      RELEASE_CODE: ${{ inputs.version_code || '2571' }}
     steps:
       - uses: actions/checkout@v4
       - name: Periksa ketersediaan signing secrets
@@ -174,15 +175,17 @@ jobs:
           cp cpanel/mobile-api/pppk_staff.php server-patch/mobile-api/
           mkdir -p server-patch/sql
           cp cpanel/mobile-api/migrate_pppk_staff_2570.sql server-patch/sql/
+          cp cpanel/mobile-api/migrate_reviews_2571.sql server-patch/sql/
+          cp cpanel/mobile-api/migrate_chat_2544.sql server-patch/sql/
           cp cpanel/mobile-api/pppk_performance.php server-patch/mobile-api/
           cp cpanel/mobile-api/pjlp_attendance_2557.php server-patch/mobile-api/
           cp cpanel/mobile-api/pjlp_shifts_2558.php server-patch/mobile-api/
           cp cpanel/mobile-api/pjlp_leave.php server-patch/mobile-api/
-          printf '%s\n' 'CikokoSmart 2570 mobile-api PATCH' '1. Backup public_html/mobile-api and its database first.' '2. Copy the CONTENTS of mobile-api/ into existing public_html/mobile-api/ (not the entire public_html).' '3. Do not erase private/, bootstrap.php, ahli-waris/config.php, database or uploaded files.' '4. Keep the production signing and admin credentials unchanged.' '5. Verify chat_v2548_status and authenticated chat_v2548_diagnostic before testing real chat.' '7. Import sql/migrate_pppk_staff_2570.sql after a database backup; never import schema.sql over production.' '8. Verify review_public returns ok=true; use admin action review_admin only with valid token.' '6. This patch does NOT repair an invalid database primary key automatically; if chat_id_auto_increment=false, inspect the existing schema and backup before migration.' > server-patch/README.txt
+          printf '%s\n' 'CikokoSmart 2571 mobile-api PATCH' '1. Backup public_html/mobile-api and its database first.' '2. Copy the CONTENTS of mobile-api/ into existing public_html/mobile-api/ (not the entire public_html).' '3. Do not erase private/, bootstrap.php, ahli-waris/config.php, database or uploaded files.' '4. Keep the production signing and admin credentials unchanged.' '5. Verify chat_v2548_status and authenticated chat_v2548_diagnostic before testing real chat.' '7. Import sql/migrate_pppk_staff_2570.sql after a database backup; never import schema.sql over production.' '8. Import sql/migrate_reviews_2571.sql, then confirm review_public returns HTTP 200 and ok=true.' '9. Check deployment_status returns api_release 2571. The chat status must respond 200 even without login.' '10. If chat schema is missing, inspect and import sql/migrate_chat_2544.sql after backup. Never overwrite existing chat records.' '6. This patch does NOT repair an invalid database primary key automatically; if chat_id_auto_increment=false, inspect the existing schema and backup before migration.' > server-patch/README.txt
       - name: Unggah patch API terpisah dari APK
         uses: actions/upload-artifact@v4
         with:
-          name: CikokoSmart-2570-MobileAPI-Patch
+          name: CikokoSmart-2571-MobileAPI-Patch
           path: server-patch/
           if-no-files-found: error
           retention-days: 30
@@ -199,8 +202,11 @@ jobs:
           set -euo pipefail
           failed=0
           for target in \
+            'deployment_status|https://datawebs.my.id/mobile-api/index.php?action=deployment_status' \
             'health|https://datawebs.my.id/mobile-api/index.php?action=health' \
             'review_public|https://datawebs.my.id/mobile-api/index.php?action=review_public' \
+            'integrated_services_public|https://datawebs.my.id/mobile-api/index.php?action=integrated_services_public' \
+            'boarding_public|https://datawebs.my.id/mobile-api/index.php?action=boarding_public' \
             'chat_v2548_status|https://datawebs.my.id/mobile-api/chat_v2548.php?action=chat_v2548_status'; do
             label="${target%%|*}"
             url="${target#*|}"
@@ -210,6 +216,13 @@ jobs:
               echo "::warning::$label belum tersedia pada server publik (HTTP $status)"
               failed=1
               continue
+            fi
+            if [[ "$label" == deployment_status ]]; then
+              python3 -c "import json; d=json.load(open('/tmp/cikoko-probe.json')); assert d.get('api_release') == '2571'" || {
+                echo "::warning::Server cPanel belum menggunakan kode rilis 2571"
+                failed=1
+                continue
+              }
             fi
             python3 -c "import json; d=json.load(open('/tmp/cikoko-probe.json')); assert d.get('ok') is True" || {
               echo "::warning::$label tidak mengembalikan ok=true dari server"
