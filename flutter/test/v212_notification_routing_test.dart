@@ -13,4 +13,13 @@ void main(){
   expect(destinationForPushCategory('inovasi',isStaff:false),'Inovasi');
   expect(destinationForPushCategory('info_aplikasi',isStaff:false),'Notifikasi');
  });
+ test('read flags use the same rule for bell, list and polling',(){
+  expect(cikokoNotificationIsRead(true),isTrue);
+  expect(cikokoNotificationIsRead(1),isTrue);
+  expect(cikokoNotificationIsRead('1'),isTrue);
+  expect(cikokoNotificationIsRead('true'),isTrue);
+  expect(cikokoNotificationIsRead(0),isFalse);
+  expect(cikokoNotificationIsRead(false),isFalse);
+  expect(cikokoNotificationIsRead(null),isFalse);
+ });
 }
