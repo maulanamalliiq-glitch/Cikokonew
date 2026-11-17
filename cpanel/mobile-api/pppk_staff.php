@@ -112,6 +112,22 @@ function pppk_staff_date(string $raw):?DateTimeImmutable{
  $d=DateTimeImmutable::createFromFormat('!Y-m-d',$raw,new DateTimeZone('Asia/Jakarta'));
  return $d&&$d->format('Y-m-d')===$raw?$d:null;
 }
+function pppk_staff_workdays(PDO $db,DateTimeImmutable $from,DateTimeImmutable $to):int {
+ // Reuse the official office holiday calendar, not PJLP employee records.
+ try{
+  $q=$db->prepare('SELECT holiday_date FROM pjlp_holidays WHERE holiday_date BETWEEN ? AND ?');
+  $q->execute([$from->format('Y-m-d'),$to->format('Y-m-d')]);
+  $holidays=array_flip($q->fetchAll(PDO::FETCH_COLUMN));
+ }catch(Throwable $e){
+  error_log('[PPPK holiday calendar] '.$e->getMessage());
+  mobile_error('Kalender hari libur kantor belum siap.',503);
+ }
+ $days=0;
+ for($d=$from;$d<=$to;$d=$d->modify('+1 day')){
+  if((int)$d->format('N')<=5 && !isset($holidays[$d->format('Y-m-d')]))$days++;
+ }
+ return $days;
+}
 function pppk_staff_active_account(string $uid,string $role):bool {
  foreach(db_read('portal_users') as $row){
   if((string)($row['id']??'')===$uid&&($row['active']??false)&&
@@ -233,7 +249,8 @@ function pppk_staff_dispatch(string $action,string $method):void {
   $phone=mobile_text($v['phone']??'',40);
   if(mobile_strlen($reason)<10||$address===''||!preg_match('/^[0-9+ -]{8,25}$/',$phone))
     mobile_error('Lengkapi alasan, alamat cuti, dan nomor telepon.',422);
-  $days=(int)$end->diff($start)->days+1;
+  $days=pppk_staff_workdays($db,$start,$end);
+  if($days<1)mobile_error('Pilih rentang cuti yang memiliki hari kerja.',422);
   $year=(int)$start->format('Y');
   // A single advisory lock covers concurrent submissions in the same calendar year.
   $lock='cikoko_staff_leave_'.$year;
