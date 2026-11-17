@@ -66,7 +66,7 @@ function cikoko_integrated_dispatch(string $action,string $method):void {
         $url=(string)($match['logo_url']??'');
         $path=(string)(parse_url($url,PHP_URL_PATH)??'');
         $name=basename($path);
-        if(!preg_match('/^[a-f0-9]{32}\\.(jpg|png|webp)$/D',$name))
+        if(!preg_match('/^[a-f0-9]{40}\\.(jpg|png|webp)$/D',$name))
             mobile_error('Logo belum diunggah melalui admin',404);
         $file=__DIR__.'/service-logos/'.$name;
         if(!is_file($file))mobile_error('Berkas logo belum tersedia',404);
