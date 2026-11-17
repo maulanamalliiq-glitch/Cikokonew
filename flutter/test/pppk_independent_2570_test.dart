@@ -19,6 +19,19 @@ class _PppkFakeApi extends CikokoApi{
   return {'ok':true};
  }
 }
+class _PppkApprovalApi extends CikokoApi {
+ _PppkApprovalApi(String currentUser){profile={'id':currentUser};}
+ @override Future<Map<String,dynamic>> call(String action,
+   {Map<String,dynamic>? body,bool authorized=false}) async {
+  if(action=='pppk_staff_leave_admin')return {'ok':true,'items':[
+    {'id':7,'employee_name':'Pegawai Uji','requested_days':2,
+     'start_date':'2026-11-19','end_date':'2026-11-20',
+     'reason':'Pengajuan cuti keluarga','status':'pending_supervisor',
+     'supervisor_user_id':'atasan-001'},
+  ],'employees':[],'supervisors':[]};
+  return {'ok':true};
+ }
+}
 void main(){
  test('PPPK menus do not open PJLP attendance or leave storage routes',(){
   final pppk=modulesForRole('pppk',{}).map((v)=>v.route).toList();
@@ -46,5 +59,17 @@ void main(){
   expect(find.byKey(const Key('pppk_leave_screen')),findsOneWidget);
   expect(find.text('Cuti PPPK'),findsOneWidget);
   expect(find.textContaining('belum ditetapkan admin'),findsOneWidget);
+ });
+
+ testWidgets('Only the assigned PPPK supervisor sees approval actions',(tester)async{
+  await tester.pumpWidget(MaterialApp(home:Scaffold(
+   body:CikokoPppkLeaveApprovalPage(api:_PppkApprovalApi('atasan-001'),role:'asn'))));
+  await tester.pumpAndSettle();
+  expect(find.text('Setujui'),findsOneWidget);
+  expect(find.text('Tolak'),findsOneWidget);
+  await tester.pumpWidget(MaterialApp(home:Scaffold(
+   body:CikokoPppkLeaveApprovalPage(api:_PppkApprovalApi('atasan-lain'),role:'asn'))));
+  await tester.pumpAndSettle();
+  expect(find.text('Setujui'),findsNothing);
  });
 }
