@@ -147,3 +147,61 @@ jobs:
       - name: Hapus keystore sementara
         if: always()
         run: rm -f "$CIKOKO_KEYSTORE_PATH"
+
+  signing-readiness:
+    name: Periksa signing secrets tanpa membuka nilainya
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Periksa keystore, alias, sertifikat, dan password
+        env:
+          CIKOKO_KEYSTORE_B64: ${{ secrets.CIKOKO_KEYSTORE_B64 }}
+          CIKOKO_STORE_PASSWORD: ${{ secrets.CIKOKO_STORE_PASSWORD }}
+          CIKOKO_KEY_PASSWORD: ${{ secrets.CIKOKO_KEY_PASSWORD }}
+        shell: python
+        run: |
+          import base64, os, pathlib, re, subprocess, tempfile
+          names = ['CIKOKO_KEYSTORE_B64', 'CIKOKO_STORE_PASSWORD', 'CIKOKO_KEY_PASSWORD']
+          def report(message):
+              print(message, flush=True)
+              with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+                  summary.write(message + '\n\n')
+          missing = [name for name in names if not os.environ.get(name)]
+          for name in names:
+              report(name + ': ' + ('MISSING' if name in missing else 'PRESENT'))
+          if missing:
+              report('SIGNING_NOT_READY: required repository secrets are missing.')
+              raise SystemExit(0)
+          with tempfile.TemporaryDirectory() as temp:
+              key = pathlib.Path(temp) / 'upload.jks'
+              try:
+                  raw = base64.b64decode(''.join(os.environ[names[0]].split()), validate=True)
+              except Exception:
+                  report('SIGNING_INVALID: keystore secret is not valid Base64.')
+                  raise SystemExit(1)
+              key.write_bytes(raw)
+              key.chmod(0o600)
+              common = ['keytool', '-J-Duser.language=en', '-J-Duser.country=US']
+              check = subprocess.run(common + ['-list', '-v', '-keystore', str(key),
+                  '-storepass:env', names[1], '-alias', 'androidkey'], capture_output=True, text=True)
+              if check.returncode:
+                  report('SIGNING_INVALID: keystore, store password, or androidkey alias could not be verified.')
+                  raise SystemExit(1)
+              match = re.search(r'SHA256:\s*([0-9A-Fa-f:]+)', check.stdout)
+              expected = '394633E6A2F4C91C150D81B228908562D230D763031A0A0C205618B9D669D4E5'
+              if not match or match[1].replace(':','').upper() != expected:
+                  report('SIGNING_INVALID: certificate does not match the existing Cikoko upload certificate.')
+                  raise SystemExit(1)
+              report('CERTIFICATE_MATCH: existing Cikoko upload certificate verified.')
+              check = subprocess.run(common + ['-certreq', '-alias', 'androidkey',
+                  '-keystore', str(key), '-storepass:env', names[1], '-keypass:env', names[2],
+                  '-file', str(pathlib.Path(temp) / 'verification.csr')], capture_output=True, text=True)
+              if check.returncode:
+                  report('SIGNING_INVALID: private key password or signing operation failed.')
+                  raise SystemExit(1)
+              report('SIGNING_READY: keystore, alias, certificate and both passwords verified. No APK/AAB built.')
