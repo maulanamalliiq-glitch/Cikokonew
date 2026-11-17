@@ -54,7 +54,7 @@ class _ReviewPageState extends State<CikokoReviewPage>{
  @override void dispose(){text.dispose();super.dispose();}
  Future<void> refresh()async{
   try{final v=await widget.api.call('review_public');if(mounted)setState(()=>data=v);}
-  catch(_){if(mounted)setState(()=>error='Daftar ulasan tidak tersedia.');}
+  catch(e){if(mounted)setState(()=>error='Daftar ulasan gagal dimuat: '+e.toString());}
  }
  Future<void> submit()async{
   if(widget.api.token==null){setState(()=>error='Silakan login untuk mengirim ulasan.');return;}
