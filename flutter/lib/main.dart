@@ -237,7 +237,7 @@ class _HomeState extends State<HomePage> {
   String? websiteHeroUrl;
   BoxFit websiteHeroFit=BoxFit.cover;
   Alignment websiteHeroAlignment=Alignment.center;
-  int get unreadCount=>events.where((e)=>e['is_read']!=true && '${e['is_read']??0}'!='1').length;
+  int get unreadCount=>events.where((e)=>e is Map && !cikokoNotificationIsRead(e['is_read'])).length;
   Map<String,int>? letterCounts;
   Map<String,bool> capabilities={};
   bool loading=true,permissionsOk=false,_refreshingEvents=false;
@@ -262,7 +262,9 @@ class _HomeState extends State<HomePage> {
       WidgetsBinding.instance.addPostFrameCallback((_){
         if(!mounted)return;
         final pushId=int.tryParse('${message.data['event_id']??''}')??0;
-        if(pushId>0)api.call('event_read',body:{'id':pushId}).then((_)=>refresh()).catchError((_){});
+        // Resolve the original inbox event before marking read, so FCM
+        // and in-app taps open the same document/conversation.
+        if(pushId>0){resolveLocalNotification(pushId);return;}
         if((message.data['category']??'')=='chat'){
           navigateChatEvent(pushId);
         }else{
@@ -484,7 +486,7 @@ class _HomeState extends State<HomePage> {
       ]),
       actions:[
        IconButton(tooltip:'Notifikasi',onPressed:()=>switchTo('Notifikasi'),
-         icon:Badge(isLabelVisible:unreadCount>0,label:Text('$unreadCount'),
+         icon:Badge(isLabelVisible:unreadCount>0,label:Text(unreadCount>99?'99+':'$unreadCount'),
            child:const Icon(Icons.notifications_none_outlined,color:V6.ink))),
        IconButton(tooltip:'Edit Profil Pengguna',
          onPressed:guest?openLogin:()=>switchTo('Edit Profil'),
@@ -595,7 +597,7 @@ class _HomeState extends State<HomePage> {
     case 'Pesan Masuk':return const AdminChatPage();
     case 'Percakapan Chat':return role=='warga'||notificationChatOwner==null
       ?const ChatPage():CikokoLiveChat(api:api,userId:notificationChatOwner,title:'Percakapan Warga');
-    case 'Notifikasi':return V6NotificationPage(guest:guest,events:events,onOpen:openNotification,login:openLogin);
+    case 'Notifikasi':return V6NotificationPage(guest:guest,events:events,onOpen:openNotification,login:openLogin,onRefresh:refresh,onReadAll:markAllNotificationsRead);
     case 'Inovasi':return InnovationPage(api:api);
      case 'Ulasan Aplikasi':return CikokoReviewPage(api:api);
      case 'Rekap Ulasan':return (role=='admin'||role=='admin_kelurahan')?CikokoAdminReviewReport(api:api):const Center(child:Text('Hanya admin yang dapat membuka rekap ulasan.'));
@@ -796,6 +798,20 @@ class _HomeState extends State<HomePage> {
  }
 
  Future<void> share(String link) async {final u=Uri.parse(link);await launchUrl(u,mode:LaunchMode.externalApplication);}
+ Future<void> markAllNotificationsRead()async{
+   if(guest)return;
+   try{
+     await api.call('event_read_all',body:{});
+     if(!mounted)return;
+     setState(()=>events=events.map((e){
+       if(e is! Map)return e;
+       return {...Map<String,dynamic>.from(e),'is_read':1};
+     }).toList());
+     await refresh();
+   }catch(e){
+     if(mounted)notify(context,'Gagal menandai notifikasi dibaca. Silakan coba lagi.',error:true);
+   }
+ }
  Future<void> resolveLocalNotification(int eventId)async{
    try{
      final response=await api.call('events');
@@ -824,7 +840,7 @@ class _HomeState extends State<HomePage> {
  }
  Future<void> openNotification(Map<String,dynamic> event)async{
      final eventId=int.tryParse('${event['id']??''}')??0;
-     if(eventId>0 && event['is_read']!=true && '${event['is_read']??0}'!='1'){
+     if(eventId>0 && !cikokoNotificationIsRead(event['is_read'])){
        try{
          await api.call('event_read',body:{'id':eventId});
          if(mounted)setState((){
