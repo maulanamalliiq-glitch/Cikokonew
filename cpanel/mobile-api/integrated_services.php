@@ -51,9 +51,8 @@ function cikoko_integrated_https(string $url):bool {
       && !isset($p['user']) && !isset($p['pass']);
 }
 function cikoko_integrated_dispatch(string $action,string $method):void {
-    // Must authenticate on BOTH read and write, because the user asked to
-    // show this list only for logged-in accounts.
-    $user=mobile_auth();
+    // Read-only catalog and approved logos are public. Editing stays protected.
+    $user=mobile_auth(!in_array($action,['integrated_services_public','integrated_services_logo'],true));
     if($action==='integrated_services_logo' && $method==='GET'){
         $id=trim((string)($_GET['id']??''));
         if(!preg_match('/^[a-zA-Z0-9_-]{1,45}$/D',$id))mobile_error('Layanan tidak ditemukan',404);
@@ -107,6 +106,12 @@ function cikoko_integrated_dispatch(string $action,string $method):void {
         $scriptPath=(string)parse_url((string)($_SERVER['SCRIPT_NAME']??'/mobile-api/index.php'),PHP_URL_PATH);
         $base=rtrim(str_replace('\\','/',dirname($scriptPath)),'/');
         mobile_json(['ok'=>true,'url'=>'https://'.$host.$base.'/service-logos/'.$filename]);
+    }
+    if($action==='integrated_services_public'){
+        if($method!=='GET')mobile_error('Metode tidak tersedia.',405);
+        $items=array_values(array_filter(cikoko_integrated_read(),
+            static fn($entry)=>is_array($entry)&&($entry['active']??true)!==false));
+        mobile_json(['ok'=>true,'items'=>$items]);
     }
     if($action==='integrated_services'){
         if($method!=='GET')mobile_error('Metode tidak tersedia.',405);
