@@ -116,6 +116,7 @@ const capabilityMenuBindings = <String,List<String>>{
  'report:kerja_bakti':['bakti'],
  'report:ppsu':['ppsu'],
  'waris:create':['waris'],
+ 'waris:verify':['verify_waris'],
  'archive:create':['archive_add'],
  'archive:view':['archive_list'],
  'content:create':['news_add','announce_add'],
