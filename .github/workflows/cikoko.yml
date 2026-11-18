@@ -14,11 +14,11 @@ on:
       version_name:
         description: 'Nama versi untuk build baru'
         type: string
-        default: '2.5.72'
+        default: '2.5.79'
       version_code:
         description: 'Harus lebih tinggi dari version code tertinggi di Play Console'
         type: string
-        default: '2572'
+        default: '2579'
 
 permissions:
   contents: read
@@ -77,7 +77,7 @@ jobs:
     name: Build APK ARM64 dan AAB signed
     needs: verify
     if: >-
-      github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && inputs.build_release) || (github.event_name == 'push' && github.event.head_commit.message == 'ci: build Cikokonew release 2572'))
+      github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && inputs.build_release) || (github.event_name == 'push' && github.event.head_commit.message == 'ci: build Cikokonew release 2579'))
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -86,8 +86,8 @@ jobs:
       CIKOKO_KEY_PASSWORD: ${{ secrets.CIKOKO_KEY_PASSWORD }}
       CIKOKO_KEY_ALIAS: androidkey
       EXPECTED_CERT: 394633E6A2F4C91C150D81B228908562D230D763031A0A0C205618B9D669D4E5
-      RELEASE_NAME: ${{ inputs.version_name || '2.5.72' }}
-      RELEASE_CODE: ${{ inputs.version_code || '2572' }}
+      RELEASE_NAME: ${{ inputs.version_name || '2.5.79' }}
+      RELEASE_CODE: ${{ inputs.version_code || '2579' }}
     steps:
       - uses: actions/checkout@v4
       - name: Periksa ketersediaan signing secrets
@@ -147,7 +147,7 @@ jobs:
       - name: Simpan APK dan AAB
         uses: actions/upload-artifact@v4
         with:
-          name: CikokoSmart-${{ inputs.version_code || '2572' }}-APK-AAB
+          name: CikokoSmart-${{ inputs.version_code || '2579' }}-APK-AAB
           path: dist/*
           if-no-files-found: error
           retention-days: 30
@@ -189,11 +189,11 @@ jobs:
           cp cpanel/mobile-api/pjlp_attendance_2557.php server-patch/mobile-api/
           cp cpanel/mobile-api/pjlp_shifts_2558.php server-patch/mobile-api/
           cp cpanel/mobile-api/pjlp_leave.php server-patch/mobile-api/
-          printf '%s\n' 'CikokoSmart 2572 mobile-api PATCH' '1. Backup public_html/mobile-api and its database first.' '2. Copy the CONTENTS of mobile-api/ into existing public_html/mobile-api/ (not the entire public_html).' '3. Do not erase private/, bootstrap.php, ahli-waris/config.php, database or uploaded files.' '4. Keep the production signing and admin credentials unchanged.' '5. Verify chat_v2548_status and authenticated chat_v2548_diagnostic before testing real chat.' '7. Import sql/migrate_pppk_staff_2570.sql after a database backup; never import schema.sql over production.' '8. Import sql/migrate_reviews_2571.sql, then confirm review_public returns HTTP 200 and ok=true.' '9. Check deployment_status returns api_release 2572. The chat status must respond 200 even without login.' '10. For missing chat tables import sql/migrate_chat_2544.sql then sql/migrate_chat_extras_2571.sql after backup. Never overwrite existing messages.' '11. After inspecting affected rows, optionally import sql/migrate_notifications_2572.sql to restore old PJLP leave alerts from private to personal scope.' '12. For PTSP and SOSIAL accounts, backup roles-lib.php and portal_users first. The updated roles-lib.php is required on public_html; update only after reviewing differences from the live site.' '13. Only Admin Utama may create PTSP/SOSIAL accounts. Do not insert account credentials directly into SQL.' '6. This patch does NOT repair an invalid database primary key automatically; if chat_id_auto_increment=false, inspect the existing schema and backup before migration.' > server-patch/README.txt
+          printf '%s\n' 'CikokoSmart 2579 mobile-api PATCH' '1. Backup public_html/mobile-api and its database first.' '2. Copy the CONTENTS of mobile-api/ into existing public_html/mobile-api/ (not the entire public_html).' '3. Do not erase private/, bootstrap.php, ahli-waris/config.php, database or uploaded files.' '4. Keep the production signing and admin credentials unchanged.' '5. Verify chat_v2548_status and authenticated chat_v2548_diagnostic before testing real chat.' '7. Import sql/migrate_pppk_staff_2570.sql after a database backup; never import schema.sql over production.' '8. Import sql/migrate_reviews_2571.sql, then confirm review_public returns HTTP 200 and ok=true.' '9. Check deployment_status returns api_release 2579. The chat status must respond 200 even without login.' '10. For missing chat tables import sql/migrate_chat_2544.sql then sql/migrate_chat_extras_2571.sql after backup. Never overwrite existing messages.' '11. After inspecting affected rows, optionally import sql/migrate_notifications_2572.sql to restore old PJLP leave alerts from private to personal scope.' '12. For PTSP and SOSIAL accounts, backup roles-lib.php and portal_users first. The updated roles-lib.php is required on public_html; update only after reviewing differences from the live site.' '13. Only Admin Utama may create PTSP/SOSIAL accounts. Do not insert account credentials directly into SQL.' '6. This patch does NOT repair an invalid database primary key automatically; if chat_id_auto_increment=false, inspect the existing schema and backup before migration.' > server-patch/README.txt
       - name: Unggah patch API terpisah dari APK
         uses: actions/upload-artifact@v4
         with:
-          name: CikokoSmart-2572-MobileAPI-Patch
+          name: CikokoSmart-2579-MobileAPI-Patch
           path: server-patch/
           if-no-files-found: error
           retention-days: 30
@@ -226,8 +226,8 @@ jobs:
               continue
             fi
             if [[ "$label" == deployment_status ]]; then
-              python3 -c "import json; d=json.load(open('/tmp/cikoko-probe.json')); assert d.get('api_release') == '2572'" || {
-                echo "::warning::Server cPanel belum menggunakan kode rilis 2572"
+              python3 -c "import json; d=json.load(open('/tmp/cikoko-probe.json')); assert d.get('api_release') == '2579'" || {
+                echo "::warning::Server cPanel belum menggunakan kode rilis 2579"
                 failed=1
                 continue
               }
