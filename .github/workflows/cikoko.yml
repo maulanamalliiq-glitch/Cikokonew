@@ -61,6 +61,9 @@ jobs:
           php qa/pppk_staff_2570_test.php
           php qa/hardcheck_routes_2571_test.php
           php qa/notification_flow_2572_test.php
+          php qa/role_permissions_smoke.php
+          php qa/asn_permissions_test.php
+          php qa/staff_ptsp_sosial_asn_test.php
       - name: Siapkan Flutter dan uji
         working-directory: flutter
         run: |
@@ -163,6 +166,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p server-patch/mobile-api
+          cp cpanel/roles-lib.php server-patch/roles-lib.php
+          cp cpanel/mobile-api/permissions.php server-patch/mobile-api/
           cp cpanel/mobile-api/index.php server-patch/mobile-api/
           cp cpanel/mobile-api/chat_v2548.php server-patch/mobile-api/
           cp cpanel/mobile-api/chat_storage_2544.php server-patch/mobile-api/
@@ -184,7 +189,7 @@ jobs:
           cp cpanel/mobile-api/pjlp_attendance_2557.php server-patch/mobile-api/
           cp cpanel/mobile-api/pjlp_shifts_2558.php server-patch/mobile-api/
           cp cpanel/mobile-api/pjlp_leave.php server-patch/mobile-api/
-          printf '%s\n' 'CikokoSmart 2572 mobile-api PATCH' '1. Backup public_html/mobile-api and its database first.' '2. Copy the CONTENTS of mobile-api/ into existing public_html/mobile-api/ (not the entire public_html).' '3. Do not erase private/, bootstrap.php, ahli-waris/config.php, database or uploaded files.' '4. Keep the production signing and admin credentials unchanged.' '5. Verify chat_v2548_status and authenticated chat_v2548_diagnostic before testing real chat.' '7. Import sql/migrate_pppk_staff_2570.sql after a database backup; never import schema.sql over production.' '8. Import sql/migrate_reviews_2571.sql, then confirm review_public returns HTTP 200 and ok=true.' '9. Check deployment_status returns api_release 2572. The chat status must respond 200 even without login.' '10. For missing chat tables import sql/migrate_chat_2544.sql then sql/migrate_chat_extras_2571.sql after backup. Never overwrite existing messages.' '11. After inspecting affected rows, optionally import sql/migrate_notifications_2572.sql to restore old PJLP leave alerts from private to personal scope.' '6. This patch does NOT repair an invalid database primary key automatically; if chat_id_auto_increment=false, inspect the existing schema and backup before migration.' > server-patch/README.txt
+          printf '%s\n' 'CikokoSmart 2572 mobile-api PATCH' '1. Backup public_html/mobile-api and its database first.' '2. Copy the CONTENTS of mobile-api/ into existing public_html/mobile-api/ (not the entire public_html).' '3. Do not erase private/, bootstrap.php, ahli-waris/config.php, database or uploaded files.' '4. Keep the production signing and admin credentials unchanged.' '5. Verify chat_v2548_status and authenticated chat_v2548_diagnostic before testing real chat.' '7. Import sql/migrate_pppk_staff_2570.sql after a database backup; never import schema.sql over production.' '8. Import sql/migrate_reviews_2571.sql, then confirm review_public returns HTTP 200 and ok=true.' '9. Check deployment_status returns api_release 2572. The chat status must respond 200 even without login.' '10. For missing chat tables import sql/migrate_chat_2544.sql then sql/migrate_chat_extras_2571.sql after backup. Never overwrite existing messages.' '11. After inspecting affected rows, optionally import sql/migrate_notifications_2572.sql to restore old PJLP leave alerts from private to personal scope.' '12. For PTSP and SOSIAL accounts, backup roles-lib.php and portal_users first. The updated roles-lib.php is required on public_html; update only after reviewing differences from the live site.' '13. Only Admin Utama may create PTSP/SOSIAL accounts. Do not insert account credentials directly into SQL.' '6. This patch does NOT repair an invalid database primary key automatically; if chat_id_auto_increment=false, inspect the existing schema and backup before migration.' > server-patch/README.txt
       - name: Unggah patch API terpisah dari APK
         uses: actions/upload-artifact@v4
         with:
