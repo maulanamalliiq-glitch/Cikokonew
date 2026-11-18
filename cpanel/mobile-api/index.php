@@ -431,7 +431,7 @@ if($action==='role_permissions'){
  mobile_need($u,'role:manage');mobile_permission_schema($db);
  if($method==='POST'){
   $b=mobile_body();$role=mobile_text($b['role']??'',50);$key=mobile_text($b['capability']??'',70);$allow=$b['allowed']??null;
-  if(!isset(mobile_role_names()[$role])||$role==='admin'||!in_array($key,mobile_permission_keys(),true)||$key==='role:manage'||!is_bool($allow))mobile_error('Role, fitur, atau status izin tidak valid',422);
+  if(!isset(mobile_role_names()[$role])||$role==='admin'||!in_array($key,mobile_permission_keys(),true)||$key==='role:manage'||($role==='warga'&&!in_array($key,['report:jumantik','waris:create'],true))||!is_bool($allow))mobile_error('Role, fitur, atau status izin tidak valid',422);
   $s=$db->prepare('INSERT INTO mobile_role_permissions(role,capability,allowed) VALUES(?,?,?) ON DUPLICATE KEY UPDATE allowed=VALUES(allowed)');$s->execute([$role,$key,$allow?1:0]);mobile_json(['ok'=>true]);
  }
  $rows=$db->query('SELECT role,capability,allowed FROM mobile_role_permissions ORDER BY role,capability')->fetchAll();
