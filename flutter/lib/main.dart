@@ -278,6 +278,30 @@ class _HomeState extends State<HomePage> {
     if(api.token==null||_refreshingEvents)return;
     _refreshingEvents=true;
     try {
+      // Recheck server permissions periodically. Revocations must hide the
+      // menu automatically, while the API checks every protected request.
+      try {
+        final latest=await api.call('permissions');
+        final raw=Map<String,dynamic>.from(latest['capabilities'] as Map);
+        if(mounted)setState((){
+          capabilities=raw.map((key,value)=>MapEntry(key,value==true));
+          permissionsOk=true;
+          if(capabilities['chat:reply']!=true &&
+             (section=='Pesan Masuk'||section=='Percakapan Chat')){
+            section='Dashboard';
+            nav=2;
+            notificationChatOwner=null;
+          }
+        });
+      } catch (_) {
+        if(mounted)setState((){
+          capabilities={};
+          permissionsOk=false;
+          if(section=='Pesan Masuk'||section=='Percakapan Chat'){
+            section='Dashboard';nav=2;notificationChatOwner=null;
+          }
+        });
+      }
       // Delivery acknowledgement is not a read receipt. A visible app inbox
       // acknowledges that the receiving device fetched the relevant chat.
       try{
