@@ -10,7 +10,9 @@ function cikoko_chat_presence_session_hash():string {
 }
 function cikoko_chat_eligible_staff(array $user):bool {
  $role=(string)($user['user_role']??'');
- return in_array($role,['admin','admin_kelurahan','asn'],true)
+ // Roles may be assigned by Super Admin; never restrict to hard-coded
+ // ASN/Admin names after the capability has been granted at the API level.
+ return $role!==''&&$role!=='warga'
   && function_exists('mobile_can') && mobile_can($user,'chat:reply');
 }
 function cikoko_chat_presence(PDO $db,array $user,bool $online=true,?string $sessionHash=null):bool {
