@@ -17,7 +17,7 @@ $method=(string)($_SERVER['REQUEST_METHOD']??'GET');
 // it does not claim database writes, push notifications, or chat are working.
 if($action==='deployment_status'&&$method==='GET'){
     echo json_encode(['ok'=>true,'service'=>'Cikoko Mobile API',
-      'api_release'=>'2579','source'=>'Cikokonew/main',
+      'api_release'=>'2580','source'=>'Cikokonew/main',
       'features'=>['public_reviews','public_services','verified_kos','chat_selfcheck','pppk_staff_separate'],
       'database_verified'=>false],JSON_UNESCAPED_UNICODE);
     exit;
