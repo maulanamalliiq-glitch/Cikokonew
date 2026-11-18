@@ -5,4 +5,6 @@ foreach(['reports:view','reports:verify','waris:view','waris:verify','monitoring
 }
 if(in_array('role:manage',mobile_default_permissions('asn'),true))throw new RuntimeException('ASN must not manage accounts or grants');
 foreach(['reports:verify','waris:verify','monitoring:view'] as $key)if(in_array($key,mobile_default_permissions('warga'),true))throw new RuntimeException('Citizen privilege escalation');
+if(!in_array('reports:verify',mobile_default_permissions('ptsp'),true))throw new RuntimeException('PTSP verification role missing');
+if(in_array('reports:view',mobile_default_permissions('sosial'),true))throw new RuntimeException('Social role must not see all resident reports');
 echo "PASS ASN/admin defaults, protected administration, resident boundary\n";
