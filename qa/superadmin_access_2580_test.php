@@ -11,6 +11,8 @@ $assert(in_array('chat:reply',$keys,true),'Izin balas chat resmi');
 $assert(in_array('reports:view',$keys,true),'Izin lihat laporan');
 $assert(in_array('reports:verify',$keys,true),'Izin verifikasi laporan');
 $assert(in_array('role:manage',mobile_default_permissions('admin'),true),'Role manage Admin');
+$policy=file_get_contents($root.'/cpanel/mobile-api/permissions.php');
+$assert(str_contains($policy,"\$role==='warga'&&!in_array(\$key,['report:jumantik','waris:create']"),'Warga tidak bisa mendapat izin membaca chat seluruh warga');
 foreach(['asn','ptsp','sosial','admin_kelurahan','pppk','pjlp'] as $role)
  $assert(!in_array('role:manage',mobile_default_permissions($role),true),'Petugas tidak boleh mengubah izin: '.$role);
 $api=file_get_contents($root.'/cpanel/mobile-api/index.php');
