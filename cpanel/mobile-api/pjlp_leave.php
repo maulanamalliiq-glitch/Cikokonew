@@ -97,8 +97,8 @@ function pjlp_store_photo(string $encoded):string {
   pjlp_fail('Foto gagal disimpan',503);
  return $filename;
 }
-function pjlp_mobile_dispatch(string $action,string $method):void {
- $actor=mobile_auth();$db=mobile_db();$uid=(string)$actor['user_id'];
+function pjlp_mobile_dispatch(string $action,string $method,?array $trustedWebsiteActor=null):void {
+ $actor=$trustedWebsiteActor??mobile_auth();$db=mobile_db();$uid=(string)$actor['user_id'];
  $role=(string)$actor['user_role'];$admin=pjlp_admin($actor);
  $staff=in_array($role,['ppsu','pjlp','lurah','asn','admin','admin_kelurahan'],true);
  if(!$staff)pjlp_fail('Fitur ini hanya untuk petugas PPSU dan pejabat berwenang',403);
