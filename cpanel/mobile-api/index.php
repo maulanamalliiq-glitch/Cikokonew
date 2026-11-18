@@ -544,8 +544,8 @@ if($action==='chat_reply'&&$method==='POST'){
 }
 if($action==='report'&&$method==='POST'){
  $kind=mobile_text($_POST['kind']??'',60);if(!in_array($kind,['jumantik','kegiatan','fkdm','lmk','posyandu','pkk','kerja_bakti','ppsu'],true))mobile_error('Jenis laporan tidak diizinkan',422);
- $roleKinds=['warga'=>['jumantik'],'jumantik_rt'=>['jumantik'],'jumantik_rw'=>['jumantik'],'fkdm'=>['fkdm','kegiatan'],'lmk'=>['lmk','kegiatan'],'posyandu'=>['posyandu','kegiatan'],'pkk'=>['pkk','kegiatan'],'dasawisma'=>['pkk','kegiatan'],'ppsu'=>['ppsu','kegiatan','kerja_bakti'],'lurah'=>['kegiatan'],'ptsp'=>['kegiatan'],'sosial'=>['kegiatan'],'dukcapil'=>['kegiatan'],'admin_kelurahan'=>['kegiatan'],'asn'=>['kegiatan'],'pppk'=>['kegiatan'],'pjlp'=>['kegiatan'],'rt'=>['kegiatan','kerja_bakti'],'rw'=>['kegiatan','kerja_bakti'],'admin'=>['kegiatan']];
- if(!in_array($kind,$roleKinds[$u['user_role']]??[],true))mobile_error('Jenis laporan tidak sesuai peran akun',403);
+ // The role permission assigned by Super Admin is authoritative. A second
+ // hard-coded role list would reject a newly granted report capability.
  mobile_need($u,'report:'.$kind);
  $address=mobile_text($_POST['address']??'',500);$phone=mobile_text($_POST['phone']??'',40);$notes=mobile_text($_POST['notes']??'',4000);if(!$address||!$notes)mobile_error('Alamat dan keterangan wajib',422);
  // Validate the existing auto-increment ID before moving a citizen photo.
