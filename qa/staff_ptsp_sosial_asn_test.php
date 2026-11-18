@@ -29,7 +29,7 @@ $portal=$read('cpanel/roles-lib.php');
 $expect(str_contains($portal,'"sosial"=>"Sosial / Kesejahteraan Rakyat"'),'Admin dapat memilih role SOSIAL');
 $api=$read('cpanel/mobile-api/index.php');
 $expect(str_contains($api,'$allowed=portal_roles()'),'Pembuatan akun harus menggunakan daftar role resmi');
-$expect(str_contains($api,"'sosial'=>['kegiatan']"),'Laporan SOSIAL hanya jenis kegiatan');
+$expect(str_contains($api,"mobile_need(\$u,'report:'.\$kind)"),'Laporan SOSIAL mengikuti izin per-role yang disimpan server');
 $expect(str_contains($api,"if((string)\$u['user_role']!=='admin')"),'Manajemen akun hanya untuk admin utama');
 $menus=$read('flutter/lib/role_catalog.dart');
 $expect(str_contains($menus,"'sosial':['staff_social_guide'"),'Menu Sosial dipisahkan');
