@@ -24,6 +24,7 @@ import 'cikoko_forgot_password.dart';
 
 import 'push.dart';
 import 'role_catalog.dart';
+import 'cikoko_staff_guides.dart';
 import 'structured_drawer.dart';
 import 'integrated_services.dart';
 import 'waris_requirements.dart';
@@ -580,6 +581,15 @@ class _HomeState extends State<HomePage> {
     case 'TTD & Stempel':return RtRwSignerPage(api:api);
     case 'Wilayah Ketua RT/RW':return RtRwOfficerManager(api:api);
     case 'Laporan Jumantik':return _v6Form('Laporan Jumantik','Laporan pemantauan jentik lingkungan.',const ReportForm(kind:'jumantik'));
+    case 'Alur PTSP':return role=='ptsp'
+        ? const CikokoStaffGuidePage(role:'ptsp')
+        : const Center(child:Text('Khusus petugas PTSP.'));
+    case 'Alur Sosial':return role=='sosial'
+        ? const CikokoStaffGuidePage(role:'sosial')
+        : const Center(child:Text('Khusus petugas Sosial.'));
+    case 'Alur Kerja ASN':return role=='asn'
+        ? const CikokoStaffGuidePage(role:'asn')
+        : const Center(child:Text('Khusus petugas ASN.'));
     case 'Laporan Kegiatan':return _v6Form('Laporan Kegiatan','Pelaporan kegiatan wilayah.',const ReportForm(kind:'kegiatan'));
     case 'Laporan LPJ RT':return _v6Form('LPJ RT','Pertanggungjawaban kegiatan dan keuangan RT.',LpjPage(api:api,kind:'lpj_rt'));
     case 'Laporan LPJ RW':return _v6Form('LPJ RW','Pertanggungjawaban kegiatan dan keuangan RW.',LpjPage(api:api,kind:'lpj_rw'));
