@@ -97,6 +97,7 @@ function pppk_staff_active_account(string $uid,string $role):bool {
  return false;
 }
 function pppk_staff_dispatch(string $action,string $method,?array $trustedWebsiteActor=null):void {
+ if($trustedWebsiteActor!==null && (!defined('CIKOKO_TRUSTED_WEB_SUPERADMIN') || CIKOKO_TRUSTED_WEB_SUPERADMIN!==true)) mobile_error('Jalur administrator website tidak diizinkan.',403);
  $actor=$trustedWebsiteActor??mobile_auth();$role=(string)$actor['user_role'];$uid=(string)$actor['user_id'];
  $admin=in_array($role,['admin','admin_kelurahan'],true);
  $worker=$role==='pppk';
