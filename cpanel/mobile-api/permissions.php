@@ -30,6 +30,9 @@ function mobile_permission_schema(PDO $db):void {
 function mobile_can(array $user,string $key):bool {
  $role=(string)($user['user_role']??'');
  if($role==='admin')return true;
+ // Public residents cannot be promoted into staff inbox, document
+ // verification or administration through an erroneous role override.
+ if($role==='warga'&&!in_array($key,['report:jumantik','waris:create'],true))return false;
  if(!in_array($key,mobile_permission_keys(),true))return false;
  if($key==='role:manage')return false; // hak kelola role hanya untuk Admin Utama
  try {
