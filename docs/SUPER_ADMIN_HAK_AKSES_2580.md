@@ -6,7 +6,7 @@ Paket patch website `CIKOKO_SUPER_ADMIN_HAK_AKSES_CHAT_2580.zip` memasang menu *
 
 Simpan izin melalui POST tervalidasi CSRF dan daftar peran/izin yang diizinkan. Penyimpanan dilakukan menggunakan tabel **`mobile_role_permissions`** yang sudah menjadi sumber kebenaran API. Tidak ada ALTER untuk tabel pegawai, surat, maupun chat.
 
-Hanya Super Admin boleh mengubah izin; role `admin` dan `warga` serta capability `role:manage` tidak bisa diedit di panel website.
+Hanya Super Admin boleh mengubah izin; role `admin` dan `warga` serta capability `role:manage` tidak bisa diedit di panel website.\n\nKeamanan tambahan: backend juga membatasi peran `warga` agar override izin lama atau aksi dari aplikasi Admin tidak dapat memberikan izin chat petugas, verifikasi, maupun administrasi kepada warga.
 
 ## Penugasan Chat Warga
 
