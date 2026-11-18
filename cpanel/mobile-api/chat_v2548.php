@@ -24,7 +24,7 @@ $action=(string)($_GET['action']??'');
 $method=(string)($_SERVER['REQUEST_METHOD']??'GET');
 if($action==='chat_v2548_status'){
  if($method!=='GET')mobile_error('Metode tidak didukung.',405);
- mobile_json(['ok'=>true,'chat_api_version'=>'2572']);
+ mobile_json(['ok'=>true,'chat_api_version'=>'2579']);
 }
 $user=mobile_auth();
 $db=mobile_db();
