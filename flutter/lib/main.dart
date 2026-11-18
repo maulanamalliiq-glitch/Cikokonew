@@ -643,7 +643,7 @@ class _HomeState extends State<HomePage> {
       onNavigate:switchTo,
       onLogout:()async{await api.logout();widget.onLogout();});
     case 'Verifikasi Laporan':return const AdminReports();
-    case 'Verifikasi Ahli Waris':return role=='admin' ? const AdminReports(onlyKind:'waris',allowWarisDate:true) : const Center(child:Text('Khusus Admin Utama.'));
+    case 'Verifikasi Ahli Waris':return (capabilities['waris:verify']==true&&capabilities['reports:view']==true) ? AdminReports(onlyKind:'waris',allowWarisDate:role=='admin') : const Center(child:Text('Hak akses verifikasi belum diberikan.'));
     case 'Laporan Kegiatan Admin':return role=='admin' ? const AdminReports(onlyKind:'report') : const Center(child:Text('Khusus Admin Utama.'));
     case 'Tambah Berita':return MobileEditor(api:api,mode:'berita');
     case 'Tambah Pengumuman':return MobileEditor(api:api,mode:'pengumuman');
