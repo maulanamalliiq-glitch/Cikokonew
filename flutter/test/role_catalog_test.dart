@@ -24,6 +24,22 @@ void main() {
    expect(sosial.any((f)=>f.route=='Kelola Akun Petugas'),isFalse);
    expect(modulesForRole('asn',{}).any((f)=>f.route=='Alur Kerja ASN'),isTrue);
  });
+ test('Super Admin chat role toggle changes PTSP and Social menus', () {
+   for(final role in ['ptsp','sosial']){
+     final off=modulesForRole(role,{'chat:reply':false,'report:kegiatan':true});
+     expect(off.any((f)=>f.route=='Pesan Masuk'),isFalse,reason:role);
+     final on=modulesForRole(role,{'chat:reply':true,'report:kegiatan':true});
+     expect(on.any((f)=>f.route=='Pesan Masuk'),isTrue,reason:role);
+     expect(on.where((f)=>f.route=='Pesan Masuk').length,1,reason:role);
+   }
+ });
+ test('Role permission toggles reveal and hide newly granted reporting', () {
+   final off=modulesForRole('sosial',{'report:kegiatan':false});
+   expect(off.any((f)=>f.route=='Laporan Kegiatan'),isFalse);
+   final on=modulesForRole('sosial',{'report:kegiatan':true,'reports:view':true});
+   expect(on.any((f)=>f.route=='Laporan Kegiatan'),isTrue);
+   expect(on.any((f)=>f.route=='Verifikasi Laporan'),isTrue);
+ });
  test('Warga tidak melihat menu verifikasi dan administrasi', () {
    final caps={'waris:create':true,'report:jumantik':true};
    final modules=modulesForRole('warga',caps);
