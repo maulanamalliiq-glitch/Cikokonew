@@ -102,6 +102,30 @@ const roleMenus = <String,List<String>>{
  'ppsu':['leave_ppsu','ppsu','bakti','kegiatan','history','news','announcements'],
  'warga':['surat_pengantar','services','waris','waris_requirements','jumantik','history','news','announcements','gallery'],
 };
+/// Permissions controlled by Super Admin unlock the matching mobile menu,
+/// even if the original role menu did not contain that feature.
+const capabilityMenuBindings = <String,List<String>>{
+ 'chat:reply':['chat_admin'],
+ 'reports:view':['verify'],
+ 'report:kegiatan':['kegiatan'],
+ 'report:jumantik':['jumantik'],
+ 'report:fkdm':['fkdm'],
+ 'report:lmk':['lmk'],
+ 'report:posyandu':['posyandu'],
+ 'report:pkk':['dasawisma'],
+ 'report:kerja_bakti':['bakti'],
+ 'report:ppsu':['ppsu'],
+ 'waris:create':['waris'],
+ 'archive:create':['archive_add'],
+ 'archive:view':['archive_list'],
+ 'content:create':['news_add','announce_add'],
+};
 List<RoleFeature> modulesForRole(String role, Map<String,bool> caps) {
- return (roleMenus[role]??roleMenus['warga']!).map((key)=>roleFeatures[key]!).where((feature)=>feature.capability==null || caps[feature.capability]==true).toList();
+ final names=<String>{...(roleMenus[role]??roleMenus['warga']!)};
+ for(final entry in capabilityMenuBindings.entries) {
+  if(caps[entry.key]==true)names.addAll(entry.value);
+ }
+ return names.map((key)=>roleFeatures[key]!)
+  .where((feature)=>feature.capability==null || caps[feature.capability]==true)
+  .toList();
 }
