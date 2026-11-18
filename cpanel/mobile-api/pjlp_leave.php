@@ -98,6 +98,7 @@ function pjlp_store_photo(string $encoded):string {
  return $filename;
 }
 function pjlp_mobile_dispatch(string $action,string $method,?array $trustedWebsiteActor=null):void {
+ if($trustedWebsiteActor!==null && (!defined('CIKOKO_TRUSTED_WEB_SUPERADMIN') || CIKOKO_TRUSTED_WEB_SUPERADMIN!==true)) mobile_error('Jalur administrator website tidak diizinkan.',403);
  $actor=$trustedWebsiteActor??mobile_auth();$db=mobile_db();$uid=(string)$actor['user_id'];
  $role=(string)$actor['user_role'];$admin=pjlp_admin($actor);
  $staff=in_array($role,['ppsu','pjlp','lurah','asn','admin','admin_kelurahan'],true);
