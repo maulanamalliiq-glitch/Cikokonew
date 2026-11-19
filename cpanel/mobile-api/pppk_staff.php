@@ -69,6 +69,20 @@ function pppk_staff_geofence(PDO $db,array $gps):void {
  $radius=max(25,min(1000,(int)$cfg['radius_m']));
  if($meters>$radius+$gps[2])mobile_error('Lokasi di luar radius kantor.',422);
 }
+/** New mobile clients provide an optional capture time; legacy APKs stay usable. */
+function pppk_staff_capture_age(array $payload):void {
+ if(!array_key_exists('captured_at',$payload))return;
+ $raw=$payload['captured_at'];
+ if(!is_string($raw)||strlen($raw)>48||!preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/D',$raw))
+  mobile_error('Waktu foto tidak valid. Aktifkan tanggal dan jam otomatis.',422);
+ try{$captured=new DateTimeImmutable($raw);}catch(Throwable $e){
+  mobile_error('Waktu foto tidak dapat dibaca.',422);
+ }
+ $seconds=time()-$captured->getTimestamp();
+ if($seconds < -60 || $seconds > 300)
+  mobile_error('Foto harus baru diambil. Sesuaikan jam HP dan ambil ulang.',422);
+}
+
 function pppk_staff_date(string $raw):?DateTimeImmutable{
  $d=DateTimeImmutable::createFromFormat('!Y-m-d',$raw,new DateTimeZone('Asia/Jakarta'));
  return $d&&$d->format('Y-m-d')===$raw?$d:null;
@@ -105,6 +119,51 @@ function pppk_staff_dispatch(string $action,string $method,?array $trustedWebsit
  $lurah=$role==='lurah';
  if(!$worker&&!$admin&&!$supervisor&&!$lurah)mobile_error('Hanya akun PPPK dan pejabat berwenang.',403);
  $db=mobile_db();pppk_staff_schema($db);
+ if($action==='pppk_staff_monitor'&&$method==='GET'){
+  if(!$admin)mobile_error('Rekap PPPK hanya untuk administrator.',403);
+  $month=(string)($_GET['month']??date('Y-m'));
+  if(!preg_match('/^20[2-9][0-9]-(0[1-9]|1[0-2])$/D',$month))
+   mobile_error('Periode tidak valid.',422);
+  $q=$db->prepare('SELECT id,user_id,work_date,shift_name,report_type,checkin_at,checkout_at,notes,latitude,longitude,accuracy_m,
+    TIMESTAMPDIFF(MINUTE,checkin_at,checkout_at) AS worked_minutes
+    FROM pppk_staff_attendance WHERE work_date LIKE ? ORDER BY work_date DESC,id DESC LIMIT 300');
+  $q->execute([$month.'%']);$items=$q->fetchAll(PDO::FETCH_ASSOC);
+  $names=[];
+  foreach(db_read('portal_users') as $member)
+   if(($member['role']??'')==='pppk')$names[(string)$member['id']]=(string)($member['name']??'PPPK');
+  foreach($items as &$item)$item['employee_name']=$names[(string)$item['user_id']]??'PPPK';
+  unset($item);
+  $q=$db->prepare('SELECT a.id AS attendance_id,a.user_id,d.stage,d.description,d.created_at
+    FROM pppk_staff_daily d JOIN pppk_staff_attendance a ON a.id=d.attendance_id
+    WHERE a.work_date LIKE ? ORDER BY d.created_at DESC LIMIT 500');
+  $q->execute([$month.'%']);
+  mobile_json(['ok'=>true,'month'=>$month,'items'=>$items,'reports'=>$q->fetchAll(PDO::FETCH_ASSOC)]);
+ }
+ if($action==='pppk_staff_photo'&&$method==='GET'){
+  $id=(int)($_GET['id']??0);$kind=(string)($_GET['kind']??'');
+  if($id<1||!in_array($kind,['checkin','checkout','stage'],true))
+   mobile_error('Jenis atau nomor foto tidak valid.',422);
+  if($kind==='stage'){
+   $stage=(int)($_GET['stage']??-1);
+   if(!in_array($stage,[0,50,100],true))mobile_error('Tahap foto tidak valid.',422);
+   $q=$db->prepare('SELECT a.user_id,d.photo AS image
+     FROM pppk_staff_daily d JOIN pppk_staff_attendance a ON a.id=d.attendance_id
+     WHERE a.id=? AND d.stage=? LIMIT 1');
+   $q->execute([$id,$stage]);
+  }else{
+   $column=$kind==='checkin'?'checkin_photo':'checkout_photo';
+   $q=$db->prepare('SELECT user_id,'.$column.' AS image FROM pppk_staff_attendance WHERE id=? LIMIT 1');
+   $q->execute([$id]);
+  }
+  $row=$q->fetch(PDO::FETCH_ASSOC);
+  if(!$row||!$row['image'])mobile_error('Foto tidak tersedia.',404);
+  if(!$admin && (!$worker || (string)$row['user_id']!==$uid))
+   mobile_error('Akses foto ditolak.',403);
+  header('Content-Type: image/jpeg');
+  header('Cache-Control: private, no-store');
+  header('X-Content-Type-Options: nosniff');
+  echo $row['image'];exit;
+ }
  if($action==='pppk_staff_attendance_me'&&$method==='GET'){
   if(!$worker)mobile_error('Kehadiran hanya untuk akun PPPK.',403);
   $month=(string)($_GET['month']??(new DateTimeImmutable('now',new DateTimeZone('Asia/Jakarta')))->format('Y-m'));
@@ -116,7 +175,7 @@ function pppk_staff_dispatch(string $action,string $method,?array $trustedWebsit
   $q->execute([$uid,$month.'%']);$items=$q->fetchAll(PDO::FETCH_ASSOC);
   $active=$db->prepare('SELECT id,work_date,shift_name,report_type,checkin_at FROM pppk_staff_attendance WHERE user_id=? AND checkout_at IS NULL ORDER BY id DESC LIMIT 1');
   $active->execute([$uid]);$current=$active->fetch(PDO::FETCH_ASSOC)?:null;
-  $stageRows=$db->prepare('SELECT a.work_date,d.stage,d.description,d.created_at FROM pppk_staff_daily d JOIN pppk_staff_attendance a ON a.id=d.attendance_id WHERE a.user_id=? AND a.work_date LIKE ? ORDER BY a.work_date DESC,d.stage');
+  $stageRows=$db->prepare('SELECT a.id AS attendance_id,a.work_date,d.stage,d.description,d.created_at FROM pppk_staff_daily d JOIN pppk_staff_attendance a ON a.id=d.attendance_id WHERE a.user_id=? AND a.work_date LIKE ? ORDER BY a.work_date DESC,d.stage');
   $stageRows->execute([$uid,$month.'%']);
   mobile_json(['ok'=>true,'month'=>$month,'items'=>$items,'active_shift'=>$current,
    'reports'=>$stageRows->fetchAll(PDO::FETCH_ASSOC),
@@ -128,6 +187,7 @@ function pppk_staff_dispatch(string $action,string $method,?array $trustedWebsit
   cikoko_rate_limit($db,'pppk_punch',$uid,16,86400);
   $body=mobile_body();$type=(string)($body['type']??'');
   if(!in_array($type,['checkin','checkout'],true))mobile_error('Aksi absensi tidak valid.',422);
+  pppk_staff_capture_age($body);
   $gps=pppk_staff_gps($body);$photo=pppk_staff_json_photo((string)($body['photo_base64']??''));
   $today=new DateTimeImmutable('now',new DateTimeZone('Asia/Jakarta'));
   $time=$today->format('Y-m-d H:i:s');
@@ -171,6 +231,16 @@ function pppk_staff_dispatch(string $action,string $method,?array $trustedWebsit
   if(!in_array($stage,[0,50,100],true))mobile_error('Tahap laporan tidak valid.',422);
   $desc=mobile_text($v['description']??'',1200);
   if(mobile_strlen($desc)<5)mobile_error('Isi keterangan pekerjaan.',422);
+  pppk_staff_capture_age($v);
+  // Extra GPS evidence is required by the new camera, but optional for old APKs.
+  // Existing leave, attendance and photos remain untouched.
+  if(array_key_exists('latitude',$v)){
+   $gps=pppk_staff_gps($v);
+   $check=$db->prepare('SELECT report_type FROM pppk_staff_attendance
+     WHERE user_id=? AND checkout_at IS NULL ORDER BY id DESC LIMIT 1');
+   $check->execute([$uid]);
+   if($check->fetchColumn()==='rutin')pppk_staff_geofence($db,$gps);
+  }
   $photo=pppk_staff_json_photo((string)($v['photo_base64']??''));
   $q=$db->prepare('SELECT id FROM pppk_staff_attendance WHERE user_id=? AND checkout_at IS NULL ORDER BY id DESC LIMIT 1');
   $q->execute([$uid]);$id=(int)$q->fetchColumn();
