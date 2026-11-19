@@ -107,7 +107,7 @@ Uint8List pppkStampPhoto(PppkStampData data) {
   final useSmall = image.width < 850;
   final font = useSmall ? img.arial14 : img.arial24;
   final lineHeight = useSmall ? 21 : 32;
-  final maxCharacters = ((image.width - 28) ~/ (useSmall ? 9 : 15)).clamp(18, 90);
+  final maxCharacters = ((image.width - 28) ~/ (useSmall ? 9 : 15)).clamp(18, 90).toInt();
   final lines = <String>[
     'CIKOKO SMART | ' + data.eventLabel,
     'Nama: ' + data.employeeName.trim(),
