@@ -210,6 +210,19 @@ class _AttendanceState extends State<CikokoPppkAttendancePage>{
         child:const Text('Lihat foto pulang')),
      ]),
     ])),
+    const SizedBox(height:12),
+    const Text('Foto bukti pekerjaan 0%, 50%, 100%',
+     style:TextStyle(fontWeight:FontWeight.w800)),
+    for(final record in (info['reports'] as List? ?? []).whereType<Map>())
+     Card(child:ListTile(
+      title:Text('Tahap '+(record['stage']??'-').toString()+'% • '+
+       (record['work_date']??'').toString()),
+      subtitle:Text((record['description']??'').toString()),
+      trailing:TextButton(
+       onPressed:()=>photoPreview(
+         int.parse(record['attendance_id'].toString()),'stage',
+         stage:int.parse(record['stage'].toString())),
+       child:const Text('Lihat foto')))),
     if(rows.isEmpty)const ListTile(title:Text('Belum ada absensi PPPK.')),
    ],
   ));
