@@ -14,11 +14,11 @@ on:
       version_name:
         description: 'Nama versi untuk build baru'
         type: string
-        default: '2.6.2'
+        default: '2.6.3'
       version_code:
         description: 'Harus lebih tinggi dari version code tertinggi di Play Console'
         type: string
-        default: '2602'
+        default: '2603'
 
 permissions:
   contents: read
@@ -78,7 +78,7 @@ jobs:
     name: Build APK ARM64 dan AAB signed
     needs: verify
     if: >-
-      github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && inputs.build_release) || (github.event_name == 'push' && github.event.head_commit.message == 'ci: build Cikokonew release 2602'))
+      github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && inputs.build_release) || (github.event_name == 'push' && github.event.head_commit.message == 'ci: build Cikokonew release 2603'))
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -87,8 +87,8 @@ jobs:
       CIKOKO_KEY_PASSWORD: ${{ secrets.CIKOKO_KEY_PASSWORD }}
       CIKOKO_KEY_ALIAS: androidkey
       EXPECTED_CERT: 394633E6A2F4C91C150D81B228908562D230D763031A0A0C205618B9D669D4E5
-      RELEASE_NAME: ${{ inputs.version_name || '2.6.2' }}
-      RELEASE_CODE: ${{ inputs.version_code || '2602' }}
+      RELEASE_NAME: ${{ inputs.version_name || '2.6.3' }}
+      RELEASE_CODE: ${{ inputs.version_code || '2603' }}
     steps:
       - uses: actions/checkout@v4
       - name: Periksa ketersediaan signing secrets
@@ -148,7 +148,7 @@ jobs:
       - name: Simpan APK dan AAB
         uses: actions/upload-artifact@v4
         with:
-          name: CikokoSmart-${{ inputs.version_code || '2602' }}-APK-AAB
+          name: CikokoSmart-${{ inputs.version_code || '2603' }}-APK-AAB
           path: dist/*
           if-no-files-found: error
           retention-days: 30
@@ -157,9 +157,9 @@ jobs:
         run: rm -f "$CIKOKO_KEYSTORE_PATH"
 
   apk-preview:
-    name: Build APK Final ARM64 + AAB Layanan Terpadu 2602 (tanpa publikasi otomatis)
+    name: Build APK ARM64 + AAB Editor Inovasi 2603 (tanpa publikasi otomatis)
     needs: verify
-    if: github.event_name == 'pull_request' && github.head_ref == 'feat/innovation-detail-2602' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && github.head_ref == 'feat/innovation-detail-2603' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -168,8 +168,8 @@ jobs:
       CIKOKO_KEY_PASSWORD: ${{ secrets.CIKOKO_KEY_PASSWORD }}
       CIKOKO_KEY_ALIAS: androidkey
       EXPECTED_CERT: 394633E6A2F4C91C150D81B228908562D230D763031A0A0C205618B9D669D4E5
-      RELEASE_NAME: 2.6.2
-      RELEASE_CODE: '2602'
+      RELEASE_NAME: 2.6.3
+      RELEASE_CODE: '2603'
     steps:
       - uses: actions/checkout@v4
       - name: Periksa keystore lama untuk APK uji
@@ -198,7 +198,7 @@ jobs:
           flutter-version: '3.41.5'
           channel: stable
           cache: true
-      - name: Validasi versi final aplikasi 2602
+      - name: Validasi versi final aplikasi 2603
         run: |
           set -euo pipefail
           python3 scripts/set_build_version.py
@@ -237,7 +237,7 @@ jobs:
       - name: Upload APK FINAL dan AAB (tanpa rilis Play Store)
         uses: actions/upload-artifact@v4
         with:
-          name: CikokoSmart-FINAL-2602-APK-AAB
+          name: CikokoSmart-FINAL-2603-APK-AAB
           path: dist/*
           if-no-files-found: error
           retention-days: 30

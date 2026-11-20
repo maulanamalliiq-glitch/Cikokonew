@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'api.dart';
 import 'cikoko_innovation_detail.dart';
+import 'cikoko_innovation_admin_editor.dart';
 import 'cikoko_v4_public_pages.dart';
 import 'cikoko_v6_showcase.dart';
 
@@ -126,6 +127,16 @@ class _InnovationPageState extends State<InnovationPage>{
            style:TextStyle(fontSize:11,color:V6.secondary))),
          IconButton(onPressed:()=>setState(reload),icon:const Icon(Icons.refresh,color:V6.blue)),
        ]))),
+     if(widget.api.profile?['role']=='admin')Padding(
+       padding:const EdgeInsets.only(bottom:10),
+       child:FilledButton.icon(
+         onPressed:()=>Navigator.of(context).push(
+           MaterialPageRoute<void>(builder:(_)=>
+             CikokoInnovationAdminPage(api:widget.api))).then((_) {
+                if(mounted)setState(reload);
+             }),
+         icon:const Icon(Icons.edit_note_outlined),
+         label:const Text('Kelola Inovasi (Super Admin)'))),
      if(items.isEmpty&&s.data?['offline']!=true)const V6Panel(
        child:Text('Belum ada inovasi yang diterbitkan.',
           style:TextStyle(fontSize:11.5,color:V6.secondary))),
@@ -160,7 +171,12 @@ class _InnovationPageState extends State<InnovationPage>{
             ])),
             if(widget.api.profile?['role']=='admin')IconButton(
               tooltip:'Edit dan unggah foto inovasi',
-              onPressed:()=>edit(item),icon:const Icon(Icons.edit_outlined,color:V6.blue,size:21)),
+              onPressed:()=>Navigator.of(context).push(
+                MaterialPageRoute<void>(builder:(_)=>
+                  CikokoInnovationEditPage(api:widget.api,item:item))).then((changed) {
+                    if(changed==true && mounted)setState(reload);
+                  }),
+              icon:const Icon(Icons.edit_outlined,color:V6.blue,size:21)),
           ]),
          ));
        }),
