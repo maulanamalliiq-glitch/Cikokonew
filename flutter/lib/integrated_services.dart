@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'api.dart';
+import 'service_requirements.dart';
 
 const _ink = Color(0xff12375d);
 const _accent = Color(0xff246ac5);
@@ -83,7 +84,14 @@ class _CikokoIntegratedServicesState extends State<CikokoIntegratedServices> {
         }
       }
       final rows=List<dynamic>.from(result['items']??[]);
-      if(mounted)setState((){entries=rows.map((e)=>Map<String,dynamic>.from(e as Map)).toList();notice=null;});
+      final next=rows.map((e)=>Map<String,dynamic>.from(e as Map)).toList();
+      if(!widget.admin){
+        try {
+          final published=await cikokoFetchPublishedServiceData();
+          next.addAll(cikokoPublishedCmsServices(published));
+        } catch (_) { /* Katalog resmi yang lama tetap tampil. */ }
+      }
+      if(mounted)setState((){entries=next;notice=null;});
     }catch(_){
       if(mounted)setState((){
         entries=cikokoDefaultIntegratedServices();
@@ -163,7 +171,7 @@ class _CikokoIntegratedServicesState extends State<CikokoIntegratedServices> {
           style:const TextStyle(fontSize:19,fontWeight:FontWeight.w800,color:_ink)),
       const SizedBox(height:6),
       Text(widget.admin?'Atur logo, judul, keterangan, tautan, dan layanan yang tampil bagi warga.':
-        'Pilih layanan untuk membuka situs resmi penyedia layanan.',
+        'Pilih layanan untuk melihat daftar pelayanan dan persyaratan.',
         style:const TextStyle(fontSize:12,color:Colors.blueGrey)),
       if(notice!=null)Padding(padding:const EdgeInsets.only(top:12),child:Card(
         child:Padding(padding:const EdgeInsets.all(12),child:Text(notice!,style:const TextStyle(fontSize:12))))),
@@ -177,9 +185,9 @@ class _CikokoIntegratedServicesState extends State<CikokoIntegratedServices> {
           Text('${entry['title']??''}',style:const TextStyle(fontSize:13.5,fontWeight:FontWeight.w700,color:_ink)),
           Text('${entry['description']??''}',style:const TextStyle(fontSize:11,color:Colors.blueGrey),maxLines:3),
           if(!widget.admin)TextButton.icon(
-            onPressed:()=>openLink('${entry['url']??''}'),
+            onPressed:()=>cikokoShowServiceRequirements(context,entry),
             icon:const Icon(Icons.open_in_new,size:14),
-            label:const Text('Lihat Selengkapnya')),
+            label:const Text('Lihat Pelayanan')),
           if(widget.admin)Text(entry['active']==false?'Disembunyikan':'Aktif',
             style:const TextStyle(fontSize:10,color:Colors.blueGrey)),
         ])),
