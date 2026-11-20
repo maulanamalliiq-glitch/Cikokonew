@@ -171,8 +171,8 @@ class _InnovationPageState extends State<InnovationPage>{
             ])),
             if(widget.api.profile?['role']=='admin')IconButton(
               tooltip:'Edit dan unggah foto inovasi',
-              onPressed:()=>Navigator.of(context).push(
-                MaterialPageRoute<void>(builder:(_)=>
+              onPressed:()=>Navigator.of(context).push<bool>(
+                MaterialPageRoute<bool>(builder:(_)=>
                   CikokoInnovationEditPage(api:widget.api,item:item))).then((changed) {
                     if(changed==true && mounted)setState(reload);
                   }),
