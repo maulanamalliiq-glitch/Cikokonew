@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'api.dart';
+import 'cikoko_innovation_detail.dart';
 import 'cikoko_v4_public_pages.dart';
 import 'cikoko_v6_showcase.dart';
 
@@ -30,7 +31,7 @@ class _InnovationPageState extends State<InnovationPage>{
  {'slug':'kampung-inggris','title':'KAMPUNG INGGRIS','summary':'Pengembangan bahasa Inggris untuk masyarakat','body':'Rincian program akan tersinkronisasi dari website Kelurahan Cikoko.'},
 ];
  Future<Map<String,dynamic>> fetchInnovations()async{
-  try{return await widget.api.call('v211_innovations');}
+  try{return await CikokoInnovationFeed.load(widget.api);}
   catch(_){return {'ok':true,'offline':true,'items':<dynamic>[]};}
  }
  void reload(){pending=fetchInnovations();}
@@ -135,19 +136,10 @@ class _InnovationPageState extends State<InnovationPage>{
          final title=(item['title']??'Inovasi Kelurahan').toString();
          final summary=(item['summary']??'').toString();
          return V6Panel(padding:const EdgeInsets.all(9),child:InkWell(
-          onTap:()=>showModalBottomSheet<void>(context:context,
-            isScrollControlled:true,showDragHandle:true,
-            builder:(sheet)=>SafeArea(child:Padding(
-              padding:const EdgeInsets.all(18),
-              child:SingleChildScrollView(child:Column(
-               mainAxisSize:MainAxisSize.min,
-               crossAxisAlignment:CrossAxisAlignment.start,children:[
-                Text(title,style:const TextStyle(
-                 fontSize:19,color:V6.ink,fontWeight:FontWeight.w900)),
-                const SizedBox(height:12),
-                Text((item['body']??summary).toString(),
-                  style:const TextStyle(fontSize:12.3,color:V6.secondary,height:1.5)),
-               ]))))),
+          onTap:()=>Navigator.of(context).push(
+            MaterialPageRoute<void>(builder:(_)=>
+              CikokoInnovationDetailPage(api:widget.api,item:item))),
+
           child:Row(children:[
             ClipRRect(borderRadius:V6.radius(9),child:image.isEmpty
               ?Container(width:91,height:85,color:V6.pale,

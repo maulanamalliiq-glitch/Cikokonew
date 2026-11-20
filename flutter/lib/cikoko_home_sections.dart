@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'api.dart';
+import 'cikoko_innovation_detail.dart';
 import 'cikoko_v6_showcase.dart';
 import 'integrated_services.dart';
 
@@ -113,8 +114,8 @@ class V6InnovationPreview extends StatefulWidget{
 }
 class _V6InnovationPreviewState extends State<V6InnovationPreview>{
  late Future<Map<String,dynamic>> pending;
- @override void initState(){super.initState();pending=widget.api.call('v211_innovations');}
- void retry()=>setState(()=>pending=widget.api.call('v211_innovations'));
+ @override void initState(){super.initState();pending=CikokoInnovationFeed.load(widget.api);}
+ void retry()=>setState(()=>pending=CikokoInnovationFeed.load(widget.api));
  @override Widget build(BuildContext context)=>Column(
   key:const Key('v6_home_innovations'),
   crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -138,7 +139,11 @@ class _V6InnovationPreviewState extends State<V6InnovationPreview>{
      for(final raw in rows)Padding(padding:const EdgeInsets.only(bottom:9),
       child:Material(color:Colors.white,borderRadius:V6.radius(12),
        child:InkWell(
-        onTap:widget.onAll,borderRadius:V6.radius(12),
+        onTap:()=>Navigator.of(context).push(
+         MaterialPageRoute<void>(builder:(_)=>
+           CikokoInnovationDetailPage(
+             api:widget.api,item:Map<String,dynamic>.from(raw)))),
+        borderRadius:V6.radius(12),
         child:Container(
          padding:const EdgeInsets.all(8),
          decoration:BoxDecoration(border:Border.all(color:V6.border),
