@@ -139,11 +139,7 @@ class _V6InnovationPreviewState extends State<V6InnovationPreview>{
      for(final raw in rows)Padding(padding:const EdgeInsets.only(bottom:9),
       child:Material(color:Colors.white,borderRadius:V6.radius(12),
        child:InkWell(
-        onTap:()=>Navigator.of(context).push(
-         MaterialPageRoute<void>(builder:(_)=>
-           CikokoInnovationDetailPage(
-             api:widget.api,item:Map<String,dynamic>.from(raw)))),
-        borderRadius:V6.radius(12),
+        onTap:widget.onAll,borderRadius:V6.radius(12),
         child:Container(
          padding:const EdgeInsets.all(8),
          decoration:BoxDecoration(border:Border.all(color:V6.border),
