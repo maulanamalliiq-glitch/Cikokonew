@@ -27,6 +27,7 @@ import 'role_catalog.dart';
 import 'cikoko_staff_guides.dart';
 import 'structured_drawer.dart';
 import 'integrated_services.dart';
+import 'service_requirements.dart';
 import 'waris_requirements.dart';
 import 'admin_accounts.dart';
 import 'mobile_editor.dart';
@@ -401,8 +402,12 @@ class _HomeState extends State<HomePage> {
           data=await api.call('integrated_services');
         }
         final all=List<dynamic>.from(data['items']??[]);
-        if(mounted)setState(()=>activeServices=all.map(
-          (e)=>Map<String,dynamic>.from(e as Map)).toList());
+        final combined=all.map((e)=>Map<String,dynamic>.from(e as Map)).toList();
+        try {
+          final published=await cikokoFetchPublishedServiceData();
+          combined.addAll(cikokoPublishedCmsServices(published));
+        } catch (_) { /* Katalog layanan lama tetap dapat digunakan. */ }
+        if(mounted)setState(()=>activeServices=combined);
       }catch(_){/* Tampilkan katalog bawaan saat server belum diperbarui. */}
       // This is public letter service-wide data, not the user's private history.
       try {
@@ -707,20 +712,8 @@ class _HomeState extends State<HomePage> {
       articleTap:_openV5Article);
   }
 
-  Future<void> _openIntegratedService(Map<String,dynamic> entry) async{
-    final title=(entry['title']??'layanan').toString();
-    final raw=(entry['url']??'').toString().trim();
-    final target=Uri.tryParse(raw);
-    if(target==null||target.scheme!='https'||target.host.isEmpty){
-      if(mounted)notify(context,'Tautan '+title+' belum tersedia. Silakan hubungi pengelola.',error:true);
-      return;
-    }
-    try{
-      final opened=await launchUrl(target,mode:LaunchMode.externalApplication);
-      if(!opened&&mounted)notify(context,'Tautan '+title+' belum dapat dibuka.',error:true);
-    }catch(_){
-      if(mounted)notify(context,'Layanan '+title+' belum dapat dibuka. Silakan mencoba kembali.',error:true);
-    }
+  Future<void> _openIntegratedService(Map<String,dynamic> entry) async {
+    await cikokoShowServiceRequirements(context, entry);
   }
 
   void _openV6Service(String route){
