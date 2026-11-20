@@ -5,7 +5,8 @@ void main() {
   test('Nomor WhatsApp editor sama dengan validasi server', () {
     expect(cikokoInnovationPhoneValid('081234567890'), isTrue);
     expect(cikokoInnovationPhoneValid('6281234567890'), isTrue);
-    expect(cikokoInnovationPhoneValid('abc'), isTrue); // can be cleared by user
+    expect(cikokoInnovationPhoneValid('abc'), isFalse);
+    expect(cikokoInnovationPhoneValid(''), isTrue);
     expect(cikokoInnovationPhoneValid('62'), isFalse);
     expect(cikokoInnovationPhoneValid('123'), isFalse);
   });

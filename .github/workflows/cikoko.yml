@@ -159,7 +159,7 @@ jobs:
   apk-preview:
     name: Build APK ARM64 + AAB Editor Inovasi 2603 (tanpa publikasi otomatis)
     needs: verify
-    if: github.event_name == 'pull_request' && github.head_ref == 'feat/innovation-detail-2603' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && github.head_ref == 'feat/full-innovation-admin-editor-2603' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:

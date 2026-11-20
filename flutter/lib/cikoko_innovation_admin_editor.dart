@@ -427,7 +427,8 @@ class _CikokoInnovationEditPageState extends State<CikokoInnovationEditPage> {
 /// Pure validation, also tested independently of the widget.
 bool cikokoInnovationPhoneValid(String phone) {
   final digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
-  if (digits.isEmpty) return true;
+  if (phone.trim().isEmpty) return true;
+  if (digits.isEmpty) return false;
   var normalized = digits;
   if (digits.startsWith('0')) normalized = '62${digits.substring(1)}';
   if (digits.startsWith('8')) normalized = '62$digits';
