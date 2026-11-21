@@ -441,8 +441,10 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
       horizontal:3,vertical:6),child:child));
 
   Widget _editableTable(){
-    const numberWidth=37.0,nameWidth=116.0,itemWidth=105.0;
-    const kgWidth=68.0,rpWidth=92.0;
+    // Compact 362dp layout: five columns fit typical Android widths.
+    // On narrower screens the table alone scrolls horizontally.
+    const numberWidth=30.0,nameWidth=100.0,itemWidth=90.0;
+    const kgWidth=62.0,rpWidth=80.0;
     const fullWidth=numberWidth+nameWidth+itemWidth+kgWidth+rpWidth;
     const columns=['No','Nama Anggota','Nama Barang','Hasil Timbangan (Kg)','Jumlah (Rp)'];
     final widths=[numberWidth,nameWidth,itemWidth,kgWidth,rpWidth];
