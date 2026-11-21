@@ -190,11 +190,11 @@ class _CikokoActivityUpdates2614State extends State<CikokoActivityUpdates2614> {
   }
   static String _kg(Object? input){
     final n=double.tryParse((input??'0').toString())??0;
-    return n.toStringAsFixed(3).replaceFirst(RegExp(r'\\.?0+$'),'');
+    return n.toStringAsFixed(3).replaceFirst(RegExp(r'\.?0+$'),'');
   }
   static String _rupiah(Object? input){
     final n=int.tryParse((input??'0').toString())??0;
     return n.toString().replaceAllMapped(
-      RegExp(r'\\B(?=(\\d{3})+(?!\\d))'),(m)=>'.');
+      RegExp(r'\B(?=(\d{3})+(?!\d))'),(m)=>'.');
   }
 }
