@@ -36,7 +36,8 @@ function mobile_notification_recipients(string $category,string $audience,?strin
     }
 
     // Only the safe publication categories may be distributed publicly.
-    $publicCategories=['berita','pengumuman','inovasi','info_aplikasi'];
+    $publicCategories=['berita','pengumuman','inovasi','info_aplikasi',
+        'jumantik_mandiri_terbaru','jumantik_rt_rw_terbaru'];
     if(!in_array($audience,['public','warga','staff'],true)
        ||!in_array($category,$publicCategories,true)){
         return [['audience'=>$audience,'recipient'=>$recipient]];
