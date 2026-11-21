@@ -32,6 +32,7 @@ import 'cikoko_jumantik_2605.dart';
 import 'app_update_2606.dart';
 import 'jumantik_review_2606.dart';
 import 'cikoko_jumantik_mandiri_2607.dart';
+import 'cikoko_google_auth_2608.dart';
 import 'waris_requirements.dart';
 import 'admin_accounts.dart';
 import 'mobile_editor.dart';
@@ -124,6 +125,21 @@ class _LoginState extends State<LoginPage>{final user=TextEditingController(),pa
  @override void dispose(){user.dispose();pass.dispose();for(final c in fields.values){c.dispose();}super.dispose();}
  TextEditingController ctrl(String key)=>fields.putIfAbsent(key,()=>TextEditingController());
  Future<void> submit() async{setState(()=>busy=true);try{if(signup){if(ctrl('password').text!=ctrl('confirm').text)throw ApiError('Konfirmasi password tidak sama');await api.register({for(final k in ['name','username','password','confirm','address','rt','rw','phone','email']) k:ctrl(k).text.trim()});if(mounted){setState(()=>signup=false);notify(context,'Akun warga aktif. Silakan login.');}}else{await api.login(user.text.trim(),pass.text);widget.onLogin();}}catch(e){if(mounted)notify(context,'$e',error:true);}finally{if(mounted)setState(()=>busy=false);}}
+ Future<void> signInGoogle() async {
+   if(busy)return;
+   setState(()=>busy=true);
+   try {
+     final idToken=await CikokoGoogleAuth2608.askForIdToken();
+     await api.googleLogin(idToken);
+     if(mounted)widget.onLogin();
+   }catch(e){
+     if(mounted&&!CikokoGoogleAuth2608.userCancelled(e)){
+       notify(context,'Login Google gagal: ${cikokoFormalMessage(e)}',error:true);
+     }
+   }finally{
+     if(mounted)setState(()=>busy=false);
+   }
+ }
  @override
  Widget build(BuildContext context) {
   final title=signup?'Registrasi Warga':'Masuk ke Cikoko Smart';
@@ -211,6 +227,19 @@ class _LoginState extends State<LoginPage>{final user=TextEditingController(),pa
        onPressed:busy?null:submit,
        child:busy?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):
           Text(signup?'Daftar Sekarang':'Masuk',style:const TextStyle(fontWeight:FontWeight.w800)))),
+      if(!signup)...[
+        const SizedBox(height:12),
+        OutlinedButton.icon(
+          key:const Key('cikoko_google_login_2608'),
+          onPressed:busy?null:signInGoogle,
+          icon:const Icon(Icons.account_circle_outlined),
+          label:const Text('Masuk dengan Google'),
+        ),
+        const SizedBox(height:6),
+        const Text('Akun warga Google baru dibuat sebagai Warga. Akun lama harus dihubungkan melalui Profil setelah login biasa.',
+          textAlign:TextAlign.center,
+          style:TextStyle(fontSize:11,color:V6.secondary)),
+      ],
       const SizedBox(height:8),
       TextButton(onPressed:busy?null:()=>setState(()=>signup=!signup),
        child:Text(signup?'Sudah punya akun? Masuk':'Belum punya akun? Registrasi',
@@ -972,7 +1001,17 @@ class _HomeState extends State<HomePage> {
       subtitle:Text('${e['message']??''}\n${e['created_at']??''}',maxLines:3,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11)),
       trailing:const Icon(Icons.chevron_right),onTap:()=>openNotification(Map<String,dynamic>.from(e)),
     )),if(events.isEmpty)const ListTile(title:Text('Belum ada notifikasi.'))]);
- Widget profilePage()=>guest?Center(child:Card(child:Padding(padding:const EdgeInsets.all(20),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.person_outline,size:42,color:blue),const Text('Silakan masuk untuk mengelola profil.'),FilledButton(onPressed:openLogin,child:const Text('Masuk'))])))):CikokoProfileEditor(api:api);
+ Widget profilePage()=>guest
+    ?Center(child:Card(child:Padding(padding:const EdgeInsets.all(20),
+      child:Column(mainAxisSize:MainAxisSize.min,children:[
+        const Icon(Icons.person_outline,size:42,color:blue),
+        const Text('Silakan masuk untuk mengelola profil.'),
+        FilledButton(onPressed:openLogin,child:const Text('Masuk'))]))))
+    :Column(children:[
+      if(role!='admin'&&role!='admin_kelurahan')
+        CikokoLinkGoogle2608(api:api),
+      Expanded(child:CikokoProfileEditor(api:api)),
+    ]);
 }
 class Field extends StatelessWidget {
   final String label;
