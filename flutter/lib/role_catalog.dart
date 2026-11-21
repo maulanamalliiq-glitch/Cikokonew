@@ -85,12 +85,12 @@ const roleFeatures = <String,RoleFeature>{
   'profile': RoleFeature('Profil Akun','Identitas dan data akun','Profil'),
 };
 const roleMenus = <String,List<String>>{
- 'admin':['bank_sampah','jumantik_mandiri_review','jumantik_review','pppk_leave_admin','reviews_manage','pjlp_2557','performance_pppk','leave_admin','push_manage','pages_manage','bendahara_manage','accounts_manage','services_manage','lpj_rt','lpj_rw','wilayah_ketua','surat_wilayah','verify_waris','verify_kegiatan','chat_admin','news_add','announce_add','archive_add','archive_list','role_manage','news','announcements','gallery','services'],
- 'admin_kelurahan':['bank_sampah','pppk_leave_admin','reviews_manage','performance_pppk','leave_admin','leave_approval','push_manage','pages_manage','surat_wilayah','verify','archive_add','archive_list','news_add','announce_add','chat_admin','news','announcements','services'],
- 'lurah':['bank_sampah','pppk_leave_admin','leave_approval','verify','archive_list','approval','monitor','protap','performance','news','announcements'],
- 'asn':['bank_sampah','staff_asn_guide','pppk_leave_admin','pjlp_2557','leave_approval','verify','archive_list','monitor','kegiatan','news','announcements'],
- 'pppk':['bank_sampah','pppk_attendance','performance_pppk','pppk_leave','kegiatan','history','news'],
- 'pjlp':['bank_sampah','attendance_staff','performance_pjlp','leave_pjlp','kegiatan','protap','history'],
+ 'admin':['jumantik_mandiri_review','jumantik_review','pppk_leave_admin','reviews_manage','pjlp_2557','performance_pppk','leave_admin','push_manage','pages_manage','bendahara_manage','accounts_manage','services_manage','lpj_rt','lpj_rw','wilayah_ketua','surat_wilayah','verify_waris','verify_kegiatan','chat_admin','news_add','announce_add','archive_add','archive_list','role_manage','news','announcements','gallery','services','bank_sampah'],
+ 'admin_kelurahan':['pppk_leave_admin','reviews_manage','performance_pppk','leave_admin','leave_approval','push_manage','pages_manage','surat_wilayah','verify','archive_add','archive_list','news_add','announce_add','chat_admin','news','announcements','services','bank_sampah'],
+ 'lurah':['pppk_leave_admin','leave_approval','verify','archive_list','approval','monitor','protap','performance','news','announcements','bank_sampah'],
+ 'asn':['staff_asn_guide','pppk_leave_admin','pjlp_2557','leave_approval','verify','archive_list','monitor','kegiatan','news','announcements','bank_sampah'],
+ 'pppk':['pppk_attendance','performance_pppk','pppk_leave','kegiatan','history','news','bank_sampah'],
+ 'pjlp':['attendance_staff','performance_pjlp','leave_pjlp','kegiatan','protap','history','bank_sampah'],
  'ptsp':['staff_ptsp_guide','verify','archive_list','kegiatan','history','services','announcements'],
  'sosial':['staff_social_guide','kegiatan','history','services','news','announcements'],
  'dukcapil':['civil','kegiatan','history','services','announcements'],
