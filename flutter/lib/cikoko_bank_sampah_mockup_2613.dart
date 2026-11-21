@@ -217,11 +217,11 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
     if(mounted)widget.onSelectSession(nextId);
   }
 
-  Future<void> _draft(){
+  Future<void> _draft() async {
     final ok=await _saveDraft();
     if(ok&&mounted)await widget.reload();
   }
-  Future<void> _submit(){
+  Future<void> _submit() async {
     if(busy||!editable)return;
     if(rows.isEmpty){widget.notify('Isi minimal satu baris penimbangan.');return;}
     final confirmed=await showDialog<bool>(
@@ -456,7 +456,7 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
           scrollDirection:Axis.horizontal,
           child:SizedBox(width:fullWidth,child:Column(children:[
             Container(
-              decoration:const BoxDecoration(
+              decoration:BoxDecoration(
                 color:navy,borderRadius:BorderRadius.circular(7)),
               child:Row(children:[
                 for(var i=0;i<columns.length;i++)
@@ -560,7 +560,7 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
             Text('Kelurahan Cikoko',style:TextStyle(
               color:Color(0xff444b52),fontSize:12.5)),
           ]),
-        )),
+        ),
       ]),
       const SizedBox(height:12),
       _dataPenimbangan(),
