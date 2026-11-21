@@ -8,6 +8,16 @@ Pada halaman Profil, kartu **Bank Sampah Cikoko** milik akun PPPK tertulis **0 K
 - Angka tersebut adalah **hasil Excel**, bukan klaim nilai yang sudah muncul di cPanel.
 - Setelah SQL 2026 benar-benar diimpor dan API 2617 dipasang, akun Maulana Malik yang nama resminya persis cocok dan unik akan menerima agregat historis pada kartu profil. Jika ada penimbangan live untuk tanggal yang sama, entri live menjadi prioritas untuk menghindari duplikasi; angka dapat berbeda dari Excel mentah.
 
+## Dua identitas arsip yang dikonfirmasi
+Pemilik proyek mengonfirmasi langsung: **Subhan = Aan Subhan** dan
+**Agus K = Agus Kurniawan**. Kedua nama singkat ini sekarang diterjemahkan
+ke nama lengkap sebelum pencocokan ID akun. Akun PJLP/PPPK tujuan **harus
+memiliki nama lengkap yang cocok secara unik**; bila tidak ada atau ganda,
+saldo tidak diberikan otomatis dan Super Admin perlu memverifikasi.
+
+Nama singkat lain pada file tidak ikut ditautkan otomatis hanya karena
+ada dugaan nama lengkap yang mirip. Nama pada baris arsip tidak diubah.
+
 ## Aturan pengaitan yang aman
 1. **Otomatis hanya untuk nama lengkap yang cocok unik** antara `source_member_name` dan `portal_users.name` (case-insensitive dan whitespace-normalized), dengan role PJLP/PPPK. Nama akun ganda atau nama disingkat tidak ditautkan otomatis.
 2. **Super Admin** dapat memeriksa nama tidak cocok pada **Laporan → Bank Sampah → Verifikasi Nama Arsip Excel 2026**, memilih satu akun PJLP/PPPK yang tepat, lalu menyimpan verifikasi. Nama sumber, nilai rupiah, dan Kg asli tidak diubah.
