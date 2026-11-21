@@ -116,8 +116,8 @@ class V6BottomNavigation extends StatelessWidget {
    ('Layanan',Icons.widgets_outlined,Icons.widgets_rounded),
    ('Inovasi',Icons.auto_awesome_outlined,Icons.auto_awesome_rounded),
    ('Beranda',Icons.home_outlined,Icons.home_rounded),
-   ('Chat',Icons.chat_bubble_outline_rounded,Icons.chat_bubble_rounded),
-   ('Akun',Icons.person_outline,Icons.person_rounded),
+   ('Laporan',Icons.assignment_outlined,Icons.assignment_rounded),
+   ('Profil',Icons.person_outline,Icons.person_rounded),
   ];
   return SafeArea(top:false,child:Container(
     height:70,
