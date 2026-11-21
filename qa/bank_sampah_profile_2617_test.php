@@ -39,8 +39,9 @@ ckbs2617check(!str_contains($php,"'somad'=>'abdul somad'"),
 ckbs2617check(str_contains($php,'$identity[\'exact\']')&&
     str_contains($php,'$identity[\'manual\']'),
     'Require exact unique or explicit Admin verification.');
-ckbs2617check(str_contains($php,"'amount_rp'=>(int)$"."historical['amount_rp']"),
-    'Summary should combine verified archive and live amounts.');
+ckbs2617check(str_contains($php,'function ckbs_personal_entries(') &&
+    str_contains($php,"'amount_rp'=>(int)$"."entry['amount_rp']"),
+    'Summary and private detail must combine confirmed archive and live amounts via shared helper.');
 ckbs2617check(str_contains($php,"$"."st->fetchAll(PDO::FETCH_ASSOC)"),
     'Never remove existing live session amounts.');
 ckbs2617check(str_contains($flutter,'archiveMappingPanel()')&&
