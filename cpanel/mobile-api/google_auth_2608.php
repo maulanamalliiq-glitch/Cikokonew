@@ -23,7 +23,8 @@ function cikoko_google_certificates():array {
     // Keep a short, local cache of public certificates only; never store ID tokens.
     static $cache=null;
     if(is_array($cache))return $cache;
-    $path=sys_get_temp_dir().'/cikoko-google-oauth-certs-2608.json';
+    // Keep cached signing certificates inside the existing non-public API private folder.
+    $path=__DIR__.'/private/google-oauth-certs-2608.json';
     $now=time();
     if(is_file($path)&&(@filemtime($path)?:0)>$now-1800){
         $decoded=json_decode((string)@file_get_contents($path),true);
