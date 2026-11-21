@@ -33,6 +33,7 @@ import 'app_update_2606.dart';
 import 'jumantik_review_2606.dart';
 import 'cikoko_jumantik_mandiri_2607.dart';
 import 'cikoko_google_auth_2608.dart';
+import 'cikoko_bank_sampah_2610.dart';
 import 'waris_requirements.dart';
 import 'admin_accounts.dart';
 import 'mobile_editor.dart';
@@ -602,6 +603,10 @@ class _HomeState extends State<HomePage> {
         :const Center(child:Text('Hanya pejabat berwenang.'));
     case 'Absensi dan Kinerja PJLP':
       return CikokoPjlp2557Page(api: api, role: role);
+    case 'Bank Sampah Cikoko':
+      return CikokoBankSampahApi2610.supportedRoles.contains(role)
+        ?BankSampahPage2610(api:api)
+        :const Center(child:Text('Bank Sampah hanya untuk PJLP, PPPK, ASN dan Admin.'));
     case 'Kinerja PPPK':
       return role=='pppk' || role=='admin' || role=='admin_kelurahan'
         ? CikokoPppkPerformancePage(api:api,role:role)
