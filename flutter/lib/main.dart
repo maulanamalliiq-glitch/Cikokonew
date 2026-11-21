@@ -29,6 +29,7 @@ import 'structured_drawer.dart';
 import 'integrated_services.dart';
 import 'service_requirements.dart';
 import 'cikoko_jumantik_2605.dart';
+import 'app_update_2606.dart';
 import 'waris_requirements.dart';
 import 'admin_accounts.dart';
 import 'mobile_editor.dart';
@@ -78,7 +79,7 @@ class CikokoApp extends StatelessWidget {
                  borderRadius:BorderRadius.circular(5)),
            ]))))),
      ),
- ]),theme:cikokoUnifiedTheme(),home:const Entry());
+ ]),theme:cikokoUnifiedTheme(),home:const CikokoUpdateGate2606(child: Entry()));
 }
 class Entry extends StatefulWidget{const Entry({super.key});@override State<Entry> createState()=>_EntryState();}
 class _EntryState extends State<Entry>{
