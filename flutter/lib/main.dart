@@ -473,32 +473,22 @@ class _HomeState extends State<HomePage> {
     if(guest&&_needsLogin(route)){openLogin();return;}
     setState((){
       section=route;
-      if(route=='Laporan Terpadu')nav=0;
+      if(route=='Laporan Terpadu')nav=3;
       else if(route=='Kelola Semua Halaman'||route=='Push Notifikasi')nav=0;
       else if(route=='Kelola Layanan Terpadu')nav=1;
       else if(route=='Verifikasi Laporan')nav=3;
       else if(route=='Layanan Online')nav=0;
       else if(route=='Inovasi')nav=1;
       else if(route=='Dashboard')nav=2;
-      else if(route=='Hubungi Kami')nav=3;
       else if(route=='Profil')nav=4;
     });
   }
   void selectNav(int index){
-    if(role=='admin'||role=='admin_kelurahan'){
-      switch(index){
-        case 0: switchTo('Kelola Semua Halaman');return;
-        case 1: switchTo(role=='admin'?'Kelola Layanan Terpadu':'Kelola Semua Halaman');return;
-        case 2: switchTo('Dashboard');return;
-        case 3: switchTo('Verifikasi Laporan');return;
-        case 4: switchTo('Profil');return;
-      }
-    }
     switch(index){
       case 0: switchTo('Layanan Online');break;
       case 1: switchTo('Inovasi');break;
       case 2: switchTo('Dashboard');break;
-      case 3: switchTo('Hubungi Kami');break;
+      case 3: switchTo('Laporan Terpadu');break;
       case 4: switchTo('Profil');break;
     }
   }
@@ -575,14 +565,12 @@ class _HomeState extends State<HomePage> {
       },
     )),
     body:loading?const Center(child:CircularProgressIndicator()):_page(),
-    bottomNavigationBar:(role=='admin'||role=='admin_kelurahan')
-      ?CikokoAdminBottomNav(selected:nav,onSelected:selectNav)
-      :V6BottomNavigation(selected:nav,onSelected:selectNav),
-    floatingActionButton:(guest||role=='warga')&&section!='Hubungi Kami'
+    bottomNavigationBar:V6BottomNavigation(selected:nav,onSelected:selectNav),
+    floatingActionButton:section!='Hubungi Kami'&&section!='Pesan Masuk'&&section!='Percakapan Chat'
       ?FloatingActionButton.small(
         heroTag:'cikoko-quick-report-chat',
-        tooltip:'Lapor cepat melalui chat',
-        onPressed:()=>switchTo('Hubungi Kami'),
+        tooltip:role=='admin'||role=='admin_kelurahan'?'Chat Admin':'Chat Cikoko',
+        onPressed:()=>switchTo(role=='admin'||role=='admin_kelurahan'?'Pesan Masuk':'Hubungi Kami'),
         backgroundColor:V6.blue,
         foregroundColor:Colors.white,
         child:const Icon(Icons.chat_bubble_outline_rounded))
