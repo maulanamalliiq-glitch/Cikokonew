@@ -100,6 +100,16 @@ class CikokoApi {
     profile=Map<String,dynamic>.from(v['user'] as Map);
     await _storage.write(key:'cikoko_token',value:token);
   }
+  Future<void> googleLogin(String idToken) async {
+    final result = await call('google_login',body:{'id_token':idToken});
+    token = result['token'] as String;
+    profile = Map<String,dynamic>.from(result['user'] as Map);
+    await _storage.write(key:'cikoko_token',value:token);
+  }
+  Future<void> googleLink(String idToken) async {
+    if(token==null||token!.isEmpty)throw ApiError('Login Cikoko dahulu.');
+    await call('google_link',body:{'id_token':idToken});
+  }
   Future<void> register(Map<String,dynamic> fields) async { await call('register',body:fields); }
   Future<void> logout() async {
     if(token!=null){
