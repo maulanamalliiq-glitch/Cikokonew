@@ -349,6 +349,9 @@ if(in_array($action,['accounts_list','accounts_create','accounts_delete','accoun
   if(!isset($allowed[$role])||mobile_strlen($name)<3||
     !preg_match('/^[a-zA-Z0-9_.-]{4,40}$/',$username)||strlen($password)<5)
    mobile_error('Periksa nama, username, password dan peran.',422);
+  if(in_array($role,['jumantik_rt','jumantik_rw'],true) &&
+     (trim(mobile_text($b['rt']??'',12))==='' || trim(mobile_text($b['rw']??'',12))===''))
+   mobile_error('Akun Jumantik wajib memiliki RT dan RW.',422);
   $email=mobile_text($b['email']??'',160);
   if(($role==='ppsu'&& !filter_var($email,FILTER_VALIDATE_EMAIL))||($email!==''&&!filter_var($email,FILTER_VALIDATE_EMAIL)))
    mobile_error('Akun PPSU wajib memiliki email yang valid untuk pemulihan OTP.',422);
