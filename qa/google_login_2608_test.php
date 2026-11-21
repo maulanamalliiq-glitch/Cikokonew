@@ -43,6 +43,6 @@ gassert(str_contains($source,"google_sub VARCHAR(64) NOT NULL PRIMARY KEY"),'Goo
 gassert(str_contains($source,"user_id VARCHAR(80) NOT NULL UNIQUE"),'Each account should map to one Google subject');
 gassert(str_contains($api,"'google_login','google_link'"),'Dedicated API Google route missing');
 gassert(str_contains($api,"require_once __DIR__.'/bootstrap.php'"),'Google route must use existing token session bootstrap');
-gassert(str_contains($app,'GoogleSignIn.instance.authenticate()'),'Native Google login missing');
+gassert(str_contains($app,'signIn.authenticate()'),'Native Google login missing');
 gassert(str_contains($sql,'CREATE TABLE IF NOT EXISTS mobile_google_accounts_2608'),'Additive migration missing');
 echo "Cikoko Google SSO 2608 QA OK\n";
