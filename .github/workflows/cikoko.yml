@@ -253,7 +253,7 @@ jobs:
     needs: verify
     if: >-
       (github.ref == 'refs/heads/main' && github.event_name != 'pull_request') ||
-      (github.event_name == 'pull_request' && github.head_ref == 'feat/google-login-2608' && github.event.pull_request.head.repo.full_name == github.repository)
+      (github.event_name == 'pull_request' && (github.head_ref == 'feat/google-login-2608' || github.head_ref == 'fix/google-profile-sync-2609') && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -333,6 +333,20 @@ jobs:
         with:
           name: CikokoSmart-2608-GoogleLogin-API-SAFE
           path: google-login-safe/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Siapkan perbaikan profil Google saja (tanpa database atau API lain)
+        run: |
+          set -euo pipefail
+          mkdir -p google-profile-2609/mobile-api
+          cp cpanel/mobile-api/google_auth_2608.php google-profile-2609/mobile-api/
+          printf '%s\n' 'CIKOKO GOOGLE PROFILE SYNC - PATCH PHP SATU FILE' '1. Khusus server dengan Login Google 2608 yang sudah berjalan.' '2. Backup public_html/mobile-api/google_auth_2608.php dan data/profil sebelum overwrite.' '3. Ekstrak isi paket di public_html/ agar mengganti mobile-api/google_auth_2608.php SAJA.' '4. Tidak ada SQL baru, tidak ada perubahan APK/AAB, index.php, password, role, RT/RW, atau laporan.' '5. Keluar dari aplikasi dan login ulang melalui Google untuk memicu penyalinan foto jika foto Cikoko masih kosong.' '6. Bila Google tidak memiliki klaim picture atau foto tidak dapat diunduh, login tetap berhasil dan foto lama tidak berubah.' '7. Nama/email hanya diisi jika kosong. Telepon, alamat, NIK, dan wilayah harus dilengkapi manual.' '8. Pastikan PHP curl/openssl aktif dan folder mobile-api/private dapat ditulis PHP.' > google-profile-2609/PANDUAN.txt
+      - name: Unggah ZIP patch profil Google satu file
+        uses: actions/upload-artifact@v4
+        with:
+          name: CikokoSmart-2608-GoogleProfil-FIX-SAFE
+          path: google-profile-2609/
           if-no-files-found: error
           retention-days: 30
 
