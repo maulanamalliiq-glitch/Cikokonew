@@ -6,13 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
- testWidgets('v2562: 5-tab nav Layanan Inovasi Beranda Chat Akun, Beranda centered',
+ testWidgets('v2611: 5-tab nav Layanan Inovasi Beranda Laporan Profil, Beranda centered',
   (tester)async{
   int? chosen;
   await tester.pumpWidget(MaterialApp(home:Scaffold(
     bottomNavigationBar:V6BottomNavigation(selected:2,onSelected:(n)=>chosen=n))));
-  // These labels are the actual v2562 navigation contract, not legacy V4 labels.
-  for(final label in const ['Layanan','Inovasi','Beranda','Chat','Akun']){
+  // These labels are the updated v2611 navigation contract; Beranda stays centered.
+  for(final label in const ['Layanan','Inovasi','Beranda','Laporan','Profil']){
     expect(find.text(label),findsOneWidget);
   }
   expect(find.byKey(const Key('v6_nav_0')),findsOneWidget);

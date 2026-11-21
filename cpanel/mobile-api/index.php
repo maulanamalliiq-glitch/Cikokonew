@@ -47,6 +47,12 @@ if($action==='health'){
         'checks'=>$files,'message'=>$ready?'Berkas API terpasang. Koneksi database belum diuji.':'Ada dependensi API yang belum terpasang.'],JSON_UNESCAPED_UNICODE);
     exit;
 }
+if($action==='app_update_policy'){
+    if($method!=='GET') { http_response_code(405);echo json_encode(['ok'=>false,'error'=>'Metode tidak diizinkan']);exit; }
+    require_once __DIR__.'/app_update_policy_2606.php';
+    echo json_encode(cikoko_version_policy_2606(),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    exit;
+}
 require __DIR__.'/bootstrap.php';
 require __DIR__.'/permissions.php';
 // Public website header image is sourced from the SAME five-photo slideshow
@@ -243,7 +249,7 @@ if($action==='me'){
 }
 // Manajemen akun: hak eksklusif Admin Utama. Penghapusan akun tidak
 // menghapus laporan/arsip historis yang diperlukan untuk audit.
-if(in_array($action,['accounts_list','accounts_create','accounts_delete','accounts_email_update','accounts_password_reset','accounts_status_update'],true)){
+if(in_array($action,['accounts_list','accounts_create','accounts_delete','accounts_email_update','accounts_password_reset','accounts_status_update','accounts_jumantik_area_update'],true)){
  if((string)$u['user_role']!=='admin')mobile_error('Hanya Admin Utama yang dapat mengelola akun petugas.',403);
  if($action==='accounts_list'&&$method==='GET'){
   $items=[];
@@ -253,7 +259,8 @@ if(in_array($action,['accounts_list','accounts_create','accounts_delete','accoun
     'username'=>(string)($entry['username']??''),'role'=>(string)($entry['role']??''),
     'rt'=>(string)($entry['rt']??''),'rw'=>(string)($entry['rw']??''),
     'active'=>(bool)($entry['active']??false),
-    'email'=>(string)($entry['email']??'')];
+    'email'=>(string)($entry['email']??''),
+    'jumantik_coordinator'=>(string)($entry['jumantik_coordinator']??'')];
   }
   mobile_json(['ok'=>true,'roles'=>portal_roles(),'items'=>$items]);
  }
@@ -342,6 +349,50 @@ if(in_array($action,['accounts_list','accounts_create','accounts_delete','accoun
   $db->prepare('DELETE FROM mobile_password_otps WHERE user_id=?')->execute([$id]);
   mobile_json(['ok'=>true,'message'=>'Email akun petugas berhasil diperbarui.']);
  }
+ if($action==='accounts_jumantik_area_update'){
+  $id=mobile_text($b['id']??'',80);
+  $newRt=mobile_text($b['rt']??'',12);
+  $newRw=mobile_text($b['rw']??'',12);
+  $newCoordinator=mobile_text($b['jumantik_coordinator']??'',120);
+  if($id===''||!preg_match('/^[0-9]{1,3}$/D',$newRt)||
+     !preg_match('/^[0-9]{1,3}$/D',$newRw)||
+     mobile_strlen($newCoordinator)<3)
+   mobile_error('Isi RT, RW dan Koordinator Jumantik yang valid.',422);
+  $path=data_path('portal_users');
+  $fp=@fopen($path,'c+');
+  if(!$fp||!flock($fp,LOCK_EX)){
+   if($fp)fclose($fp);
+   mobile_error('Data akun sedang digunakan.',503);
+  }
+  $original='';
+  try{
+   rewind($fp);
+   $original=stream_get_contents($fp);
+   $entries=json_decode($original?:'[]',true,512,JSON_THROW_ON_ERROR);
+   if(!is_array($entries))throw new RuntimeException('Invalid accounts');
+   $found=false;
+   foreach($entries as &$entry){
+    if((string)($entry['id']??'')!==$id)continue;
+    if(!in_array((string)($entry['role']??''),['jumantik_rt','jumantik_rw'],true))
+     mobile_error('Hanya akun Jumantik RT/RW yang dapat diubah.',403);
+    $entry['rt']=$newRt;$entry['rw']=$newRw;
+    $entry['jumantik_coordinator']=$newCoordinator;
+    $found=true;break;
+   }unset($entry);
+   if(!$found)mobile_error('Akun Jumantik tidak ditemukan.',404);
+   $json=json_encode($entries,JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT|
+     JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
+   rewind($fp);
+   if(!ftruncate($fp,0)||fwrite($fp,$json)!==strlen($json)||!fflush($fp))
+    throw new RuntimeException('Failed to persist area');
+  }catch(Throwable $e){
+   if($original!==''){rewind($fp);ftruncate($fp,0);fwrite($fp,$original);fflush($fp);}
+   flock($fp,LOCK_UN);fclose($fp);
+   throw $e;
+  }
+  flock($fp,LOCK_UN);fclose($fp);
+  mobile_json(['ok'=>true,'message'=>'Wilayah dan koordinator Jumantik berhasil diperbarui.']);
+ }
  if($action==='accounts_create'){
   $name=mobile_text($b['name']??'',120);$username=mobile_text($b['username']??'',80);
   $password=(string)($b['password']??'');$role=mobile_text($b['role']??'',50);
@@ -349,6 +400,14 @@ if(in_array($action,['accounts_list','accounts_create','accounts_delete','accoun
   if(!isset($allowed[$role])||mobile_strlen($name)<3||
     !preg_match('/^[a-zA-Z0-9_.-]{4,40}$/',$username)||strlen($password)<5)
    mobile_error('Periksa nama, username, password dan peran.',422);
+  $isJumantik=in_array($role,['jumantik_rt','jumantik_rw'],true);
+  $jumantikRt=mobile_text($b['rt']??'',12);
+  $jumantikRw=mobile_text($b['rw']??'',12);
+  $jumantikCoordinator=mobile_text($b['jumantik_coordinator']??'',120);
+  if($isJumantik && (!preg_match('/^[0-9]{1,3}$/D',$jumantikRt) ||
+      !preg_match('/^[0-9]{1,3}$/D',$jumantikRw) ||
+      mobile_strlen($jumantikCoordinator)<3))
+   mobile_error('Akun Jumantik memerlukan RT, RW (angka) dan nama Koordinator RW.',422);
   $email=mobile_text($b['email']??'',160);
   if(($role==='ppsu'&& !filter_var($email,FILTER_VALIDATE_EMAIL))||($email!==''&&!filter_var($email,FILTER_VALIDATE_EMAIL)))
    mobile_error('Akun PPSU wajib memiliki email yang valid untuk pemulihan OTP.',422);
@@ -360,7 +419,8 @@ if(in_array($action,['accounts_list','accounts_create','accounts_delete','accoun
   $users[]=['id'=>bin2hex(random_bytes(12)),'name'=>$name,'username'=>$username,
    'password_hash'=>password_hash($password,PASSWORD_DEFAULT),'role'=>$role,
    'department'=>(string)$allowed[$role],'rt'=>mobile_text($b['rt']??'',12),
-   'rw'=>mobile_text($b['rw']??'',12),'phone'=>mobile_text($b['phone']??'',40),
+   'rw'=>mobile_text($b['rw']??'',12),'jumantik_coordinator'=>$isJumantik?$jumantikCoordinator:'',
+   'phone'=>mobile_text($b['phone']??'',40),
    'email'=>mobile_text($b['email']??'',160),'active'=>true,'created_at'=>date('c')];
   if(!db_write('portal_users',$users))mobile_error('Akun gagal disimpan.',503);
   mobile_json(['ok'=>true,'message'=>'Akun petugas berhasil dibuat.']);
