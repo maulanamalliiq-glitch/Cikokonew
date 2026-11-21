@@ -15,7 +15,8 @@ void main() {
 
   testWidgets('Approved mockup renders Cikoko header, live totals and native entry controls',
     (tester) async {
-    await tester.binding.setSurfaceSize(const Size(440,1400));
+    // Typical 390dp Android layout: the five-column form must remain usable.
+    await tester.binding.setSurfaceSize(const Size(390,1400));
     addTearDown(()=>tester.binding.setSurfaceSize(null));
     final requests=<Map<String,dynamic>>[];
     final notifications=<String>[];
@@ -32,6 +33,7 @@ void main() {
         notify:notifications.add,
       )),
     )));
+    expect(tester.takeException(),isNull);
     expect(find.text('Cikoko Smart'),findsOneWidget);
     expect(find.text('Input Bank Sampah'),findsOneWidget);
     expect(find.text('Data Penimbangan'),findsOneWidget);
