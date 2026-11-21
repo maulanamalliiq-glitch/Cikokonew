@@ -27,6 +27,15 @@ foreach([
 
 ckbs2617check(str_contains($php,'if(array_key_exists($key,$unique))$unique[$key]=null;'),
     'Duplicate account names cannot be matched automatically.');
+ckbs2617check(str_contains($php,"'subhan'=>'aan subhan'"),
+    'Konfirmasi Subhan = Aan Subhan harus diterapkan ke saldo profil.');
+ckbs2617check(str_contains($php,"'agus k'=>'agus kurniawan'"),
+    'Konfirmasi Agus K = Agus Kurniawan harus diterapkan ke saldo profil.');
+ckbs2617check(str_contains($php,'$key=$verifiedAliases[$key]??$key;')&&
+              str_contains($php,'$id=$identity[\'exact\'][$key]??null;'),
+    'Alias harus tetap dipadankan ke akun lengkap yang unik.');
+ckbs2617check(!str_contains($php,"'somad'=>'abdul somad'"),
+    'Nama singkat lain yang belum dikonfirmasi tidak boleh ditautkan otomatis.');
 ckbs2617check(str_contains($php,'$identity[\'exact\']')&&
     str_contains($php,'$identity[\'manual\']'),
     'Require exact unique or explicit Admin verification.');
