@@ -133,6 +133,13 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
       'Juli','Agustus','September','Oktober','November','Desember'];
     return d.day.toString()+' '+months[d.month]+' '+d.year.toString();
   }
+  static String _hari(String iso){
+    final date=DateTime.tryParse(iso);
+    if(date==null)return '-';
+    const days=['','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
+    return days[date.weekday];
+  }
+
   static int _amountValue(String value){
     return int.tryParse(value.replaceAll(RegExp(r'[^0-9]'),''))??0;
   }
@@ -335,8 +342,8 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
       child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
         _banner('Data Penimbangan',Icons.event_note_outlined),
         const SizedBox(height:7),
-        line('Hari',const Text('Minggu',style:TextStyle(
-          fontWeight:FontWeight.w800,color:deepBlue))),
+        line('Hari',Text(_hari(widget.session['session_date'].toString()),
+          style:const TextStyle(fontWeight:FontWeight.w800,color:deepBlue))),
         line('Tanggal',Container(
           padding:const EdgeInsets.symmetric(horizontal:10,vertical:1),
           decoration:BoxDecoration(border:Border.all(color:border),
