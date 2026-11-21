@@ -191,13 +191,40 @@ function ckbs_totals(array $rows):array {
 $action=(string)($_GET['action']??'');
 $method=(string)($_SERVER['REQUEST_METHOD']??'GET');
 $methods=[
- 'status'=>'GET','summary'=>'GET','dashboard'=>'GET','members'=>'GET','schedule'=>'GET',
+ 'public_activity'=>'GET','status'=>'GET','summary'=>'GET','dashboard'=>'GET','members'=>'GET','schedule'=>'GET',
  'session_entries'=>'GET','annual'=>'GET','annual_csv'=>'GET',
  'member_set'=>'POST','officer_set'=>'POST','config_set'=>'POST',
  'session_create'=>'POST','session_submit'=>'POST','session_status'=>'POST','entry_save'=>'POST','entry_void'=>'POST'
 ];
 if(!isset($methods[$action]))mobile_error('Layanan Bank Sampah tidak tersedia.',404);
 if($methods[$action]!==$method)mobile_error('Metode tidak diizinkan.',405);
+// Public bulletin: only already approved/closed aggregate weighing sessions.
+// Never expose staff names, individual amounts, phone numbers or draft results.
+if($action==='public_activity'){
+    $db=mobile_db();
+    $q=$db->query('SELECT s.session_date,
+        COALESCE(SUM(e.weight_kg),0) AS weight_kg,
+        COALESCE(SUM(e.amount_rp),0) AS amount_rp,
+        COUNT(e.id) AS entries
+      FROM mobile_bank_sampah_sessions_2610 s
+      JOIN mobile_bank_sampah_entries_2610 e
+        ON e.session_id=s.id AND e.voided_at IS NULL
+      WHERE s.status="closed" AND s.session_date<=CURDATE()
+      GROUP BY s.id,s.session_date
+      HAVING COUNT(e.id)>0
+      ORDER BY s.session_date DESC,s.id DESC
+      LIMIT 3');
+    $items=[];
+    foreach($q->fetchAll(PDO::FETCH_ASSOC) as $row){
+        $items[]=[
+          'date'=>(string)$row['session_date'],
+          'weight_kg'=>(string)$row['weight_kg'],
+          'amount_rp'=>(int)$row['amount_rp'],
+          'entries'=>(int)$row['entries'],
+        ];
+    }
+    mobile_json(['ok'=>true,'items'=>$items]);
+}
 $actor=mobile_auth();
 ckbs_only_role($actor,['admin','admin_kelurahan','asn','lurah','pjlp','pppk']);
 $db=mobile_db();ckbs_schema($db);
