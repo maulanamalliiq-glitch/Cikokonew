@@ -98,7 +98,103 @@ function cikoko_google_verify_id_token(string $jwt):array {
         mobile_error('Gunakan akun Google dengan email terverifikasi.',403);
     $name=mobile_text($claims['name']??'Pengguna Google',120);
     if(mobile_strlen($name)<3)$name='Pengguna Google';
-    return ['sub'=>$subject,'email'=>strtolower($email),'name'=>$name];
+    return ['sub'=>$subject,'email'=>strtolower($email),'name'=>$name,
+      'picture'=>cikoko_google_picture_url($claims['picture']??null)];
+}
+
+
+/**
+ * Optional signed Google picture: allow only Google photo hosts. Never fetch
+ * arbitrary URLs from clients; no redirects and size limits prevent SSRF.
+ */
+function cikoko_google_picture_url(mixed $url):?string {
+    if(!is_string($url)||strlen($url)>1500||!filter_var($url,FILTER_VALIDATE_URL))return null;
+    $parts=parse_url($url);
+    if(!is_array($parts)||strtolower((string)($parts['scheme']??''))!=='https'||
+       isset($parts['port'])||isset($parts['user'])||isset($parts['pass'])||
+       !preg_match('/^lh[3-6]\\.googleusercontent\\.com$/D',strtolower((string)($parts['host']??''))))return null;
+    return $url;
+}
+function cikoko_google_download_photo(?string $url):?string {
+    if($url===null||!function_exists('curl_init'))return null;
+    $bytes='';$limit=2*1024*1024;
+    $ch=curl_init($url);
+    curl_setopt_array($ch,[
+      CURLOPT_RETURNTRANSFER=>false,CURLOPT_CONNECTTIMEOUT=>4,CURLOPT_TIMEOUT=>9,
+      CURLOPT_FOLLOWLOCATION=>false,CURLOPT_SSL_VERIFYPEER=>true,
+      CURLOPT_SSL_VERIFYHOST=>2,CURLOPT_MAXREDIRS=>0,
+      CURLOPT_HTTPHEADER=>['Accept: image/jpeg,image/png,image/webp'],
+      CURLOPT_WRITEFUNCTION=>static function($curl,string $chunk)use(&$bytes,$limit):int {
+          $n=strlen($chunk);if(strlen($bytes)+$n>$limit)return 0;
+          $bytes.=$chunk;return $n;
+      }
+    ]);
+    $ok=curl_exec($ch);$status=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    if($ok!==true||$status!==200||$bytes==='')return null;
+    $info=@getimagesizefromstring($bytes);
+    if(!is_array($info)||($info[0]??0)<1||($info[1]??0)<1||
+       ($info[0]??0)>4096||($info[1]??0)>4096)return null;
+    $ext=['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'][$info['mime']??'']??null;
+    if(!$ext||!is_dir(__DIR__.'/private'))return null;
+    $name=bin2hex(random_bytes(20)).'.'.$ext;$path=__DIR__.'/private/'.$name;
+    if(@file_put_contents($path,$bytes,LOCK_EX)!==strlen($bytes)){@unlink($path);return null;}
+    @chmod($path,0640);
+    return $name;
+}
+/**
+ * Synchronize only missing name/email and missing avatar. Existing photos,
+ * role, NIK, phone, address, RT/RW and Cikoko account identifiers are preserved.
+ * Synchronization must never prevent a successful Google login.
+ */
+function cikoko_google_autofill(array $account,array $identity,bool $alreadyLocked=false):array {
+    $missingPhoto=trim((string)($account['photo_name']??''))==='';
+    $missingName=trim((string)($account['name']??''))===''||
+        (string)($account['name']??'')==='Pengguna Google';
+    $missingEmail=trim((string)($account['email']??''))==='';
+    if(!$missingPhoto&&!$missingName&&!$missingEmail)return $account;
+    $download=$missingPhoto?cikoko_google_download_photo($identity['picture']??null):null;
+    $lock=null;$usedPhoto=false;$saved=false;
+    if(!$alreadyLocked){
+        $lock=@fopen(data_path('portal_users').'.google-lock','c');
+        if(!$lock||!flock($lock,LOCK_EX)){
+            if($lock)fclose($lock);
+            if($download!==null)@unlink(__DIR__.'/private/'.$download);
+            return $account;
+        }
+    }
+    try{
+        $rows=db_read('portal_users');$result=$account;$changed=false;
+        foreach($rows as &$row){
+            if(!is_array($row)||(string)($row['id']??'')!==(string)($account['id']??''))continue;
+            if(empty($row['active'])||in_array((string)($row['role']??''),['admin','admin_kelurahan'],true))break;
+            if($download!==null&&trim((string)($row['photo_name']??''))===''){
+                $row['photo_name']=$download;$usedPhoto=true;$changed=true;
+            }
+            if((trim((string)($row['name']??''))===''||
+                (string)($row['name']??'')==='Pengguna Google')&&
+               (string)($identity['name']??'')!=='Pengguna Google'){
+                $row['name']=$identity['name'];$changed=true;
+            }
+            if(trim((string)($row['email']??''))===''&&
+                filter_var((string)($identity['email']??''),FILTER_VALIDATE_EMAIL)){
+                $row['email']=$identity['email'];$changed=true;
+            }
+            $result=$row;break;
+        }
+        unset($row);
+        if($changed){$saved=db_write('portal_users',$rows);if(!$saved){
+            error_log('[Google Profile Sync] Cannot persist optional profile fields.');
+            return $account;
+        }}
+        return $result;
+    }catch(Throwable $e){
+        error_log('[Google Profile Sync] Optional profile sync failed.');
+        return $account;
+    }finally{
+        if($download!==null&&(!$usedPhoto||!$saved))@unlink(__DIR__.'/private/'.$download);
+        if($lock!==null){flock($lock,LOCK_UN);fclose($lock);}
+    }
 }
 
 function cikoko_google_schema(PDO $db):void {
@@ -181,7 +277,8 @@ function cikoko_google_route(string $action,string $method):void {
                 mobile_error('Google sudah terhubung dengan akun lain. Muat ulang.',409);
             }
         }
-        mobile_json(['ok'=>true,'message'=>'Akun Google berhasil ditautkan. Anda bisa masuk melalui Google berikutnya.']);
+        cikoko_google_autofill($user,$identity);
+        mobile_json(['ok'=>true,'message'=>'Google terhubung. Foto Google dipakai bila foto profil Cikoko masih kosong.']);
     }
 
     if($action!=='google_login')mobile_error('Aksi tidak ditemukan.',404);
@@ -191,6 +288,7 @@ function cikoko_google_route(string $action,string $method):void {
         $user=cikoko_google_find_user((string)$linkedId);
         if(!cikoko_google_eligible($user))
             mobile_error('Akun terkait tidak aktif atau membutuhkan login khusus.',403);
+        $user=cikoko_google_autofill($user,$identity);
         cikoko_google_issue_session($db,$user);
     }
 
@@ -218,6 +316,7 @@ function cikoko_google_route(string $action,string $method):void {
         if($linkedId!==false){
             $user=cikoko_google_find_user((string)$linkedId);
             if(!cikoko_google_eligible($user))mobile_error('Akun tidak aktif.',403);
+            $user=cikoko_google_autofill($user,$identity,true);
             cikoko_google_issue_session($db,$user);
         }
         $users=db_read('portal_users');
@@ -243,6 +342,7 @@ function cikoko_google_route(string $action,string $method):void {
                 ->execute([$subject,$id]);
             mobile_error('Pendaftaran Google gagal disimpan. Silakan coba lagi.',503);
         }
+        $new=cikoko_google_autofill($new,$identity,true);
         cikoko_google_issue_session($db,$new);
     } finally {
         flock($lock,LOCK_UN);
