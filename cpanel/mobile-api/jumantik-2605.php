@@ -131,10 +131,11 @@ if ($action === 'admin_list' || $action === 'admin_publish' || $action === 'admi
         exit;
     }
     if ($action === 'admin_list') {
+        // Include published/rejected history; a verified item must not appear lost.
         $q = $db->query('SELECT id,officer_name,officer_role,coordinator,rt,rw,tanggal,
             minggu_ke,lokasi,tempat_umum_lainnya,nama_kepala_keluarga,
-            alamat_lengkap,jentik,status,created_at
-            FROM mobile_jumantik_reports WHERE status="pending" ORDER BY id DESC LIMIT 80');
+            alamat_lengkap,jentik,status,created_at,published_at,reviewed_at
+            FROM mobile_jumantik_reports ORDER BY id DESC LIMIT 120');
         mobile_json(['ok'=>true,'items'=>$q->fetchAll(PDO::FETCH_ASSOC)]);
     }
     $b = mobile_body();
