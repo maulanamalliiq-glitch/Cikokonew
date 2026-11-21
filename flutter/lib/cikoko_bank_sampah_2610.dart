@@ -518,7 +518,8 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
           members:users,
           availableSessions:sessions,
           onSelectSession:changeSession,
-          officerName:(widget.api.profile?['name']??'Petugas Bank Sampah').toString(),
+          officerName:canManage?'Petugas PJLP/PPPK yang ditunjuk'
+            :(widget.api.profile?['name']??'Petugas Bank Sampah').toString(),
           canInput:canInput,
           canManage:canManage,
           request:(action,body)=>CikokoBankSampahApi2610.call(
