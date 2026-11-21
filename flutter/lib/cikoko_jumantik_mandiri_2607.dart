@@ -236,8 +236,7 @@ class _JumantikMandiriWarga2607State extends State<JumantikMandiriWarga2607> {
                     initialValue: answers[entry.key],
                     isExpanded: true,
                     decoration: InputDecoration(
-                      labelText: entry.value,
-                      labelMaxLines: 3,
+                      label: Text(entry.value, maxLines: 3, overflow: TextOverflow.ellipsis),
                       border: const OutlineInputBorder()),
                     items: const [
                       DropdownMenuItem(value: 'ya', child: Text('Ya')),
@@ -466,7 +465,7 @@ class _JumantikMandiriAdmin2607State extends State<JumantikMandiriAdmin2607> {
                         label: const Text('Verifikasi & Terbitkan')),
                     ]),
                   ]),
-                )),
+                ),
               ],
             ));
           }),
