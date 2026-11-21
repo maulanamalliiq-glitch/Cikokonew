@@ -488,7 +488,12 @@ class V6AdminHome extends StatelessWidget {
    required this.articleTap,required this.navigate});
  @override Widget build(BuildContext context) {
   final allowed=modules.map((m)=>m.route).toSet();
+  // Put daily Super Admin work first; keep all existing editor routes.
   const actions=[
+   ('Pusat Laporan','Laporan Terpadu',Icons.assignment_outlined),
+   ('Bank Sampah','Bank Sampah Cikoko',Icons.recycling_outlined),
+   ('Jumantik RT/RW','Verifikasi Jumantik',Icons.bug_report_outlined),
+   ('Jumantik Warga','Verifikasi Jumantik Mandiri',Icons.verified_outlined),
    ('Kelola Halaman','Kelola Semua Halaman',Icons.dashboard_customize_outlined),
    ('Verifikasi Laporan','Verifikasi Laporan',Icons.fact_check_outlined),
    ('Verifikasi Ahli Waris','Verifikasi Ahli Waris',Icons.verified_user_outlined),
@@ -553,7 +558,8 @@ class V6AdminHome extends StatelessWidget {
     physics:const NeverScrollableScrollPhysics(),
     childAspectRatio:1.13,crossAxisSpacing:9,mainAxisSpacing:9,
     children:[
-     for(final item in actions)if(allowed.contains(item.$2))
+     for(final item in actions)
+       if(item.$2=='Laporan Terpadu'||allowed.contains(item.$2))
        Material(color:Colors.white,borderRadius:V6.radius(12),
         child:InkWell(onTap:()=>navigate(item.$2),
          child:Container(padding:const EdgeInsets.all(7),
