@@ -47,6 +47,12 @@ if($action==='health'){
         'checks'=>$files,'message'=>$ready?'Berkas API terpasang. Koneksi database belum diuji.':'Ada dependensi API yang belum terpasang.'],JSON_UNESCAPED_UNICODE);
     exit;
 }
+if($action==='app_update_policy'){
+    if($method!=='GET') { http_response_code(405);echo json_encode(['ok'=>false,'error'=>'Metode tidak diizinkan']);exit; }
+    require_once __DIR__.'/app_update_policy_2606.php';
+    echo json_encode(cikoko_version_policy_2606(),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    exit;
+}
 require __DIR__.'/bootstrap.php';
 require __DIR__.'/permissions.php';
 // Public website header image is sourced from the SAME five-photo slideshow
