@@ -273,11 +273,13 @@ class V6ReportPanel extends StatelessWidget{
   final allowed=modules.map((x)=>x.route).toSet();
   final entries=isCitizen
    ?const [
-     ('Laporan Jumantik','Laporan Jumantik',Icons.health_and_safety_outlined),
+     ('Jumantik Mandiri','Jumantik Mandiri',Icons.health_and_safety_outlined),
      ('Pengaduan Warga','Hubungi Kami',Icons.campaign_outlined),
      ('Riwayat Laporan','Riwayat',Icons.history_outlined)]
    :[
      for(final e in const [
+       ('Laporan Jumantik RT/RW','Laporan Jumantik RT/RW',Icons.health_and_safety_outlined),
+       ('Jumantik Mandiri','Jumantik Mandiri',Icons.spa_outlined),
        ('Laporan Kegiatan','Laporan Kegiatan',Icons.assignment_outlined),
        ('Laporan LPJ RT','Laporan LPJ RT',Icons.receipt_long_outlined),
        ('Laporan LPJ RW','Laporan LPJ RW',Icons.receipt_long_outlined),

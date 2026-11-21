@@ -172,7 +172,7 @@ class CikokoV5ReportPanel extends StatelessWidget{
     required this.onLetterStatus,this.expanded=false});
   List<CikokoV5Shortcut> _actions(){
     if(guest||role=='warga')return const [
-      CikokoV5Shortcut('Laporan Jumantik','Pemantauan lingkungan','Laporan Jumantik',
+      CikokoV5Shortcut('Jumantik Mandiri','Pemantauan lingkungan','Jumantik Mandiri',
         Icons.health_and_safety_outlined,Color(0xFFE6F4FF)),
       CikokoV5Shortcut('Riwayat Pengajuan','Pantau laporan dan surat','Riwayat',
         Icons.fact_check_outlined,Color(0xFFE9F8EE)),
@@ -712,7 +712,7 @@ class _CikokoV5ServicesHubState extends State<CikokoV5ServicesHub>{
   static const entries=[
     ('Surat Ahli Waris','Pengajuan dan informasi persyaratan','Surat','Surat Ahli Waris',Icons.description_outlined),
     ('Pengantar RT/RW','Pengajuan pengantar melalui wilayah RT/RW','Surat','Surat Pengantar RT/RW',Icons.home_work_outlined),
-    ('Pelaporan Jumantik','Pemantauan kondisi lingkungan','Laporan','Laporan Jumantik',Icons.health_and_safety_outlined),
+    ('Jumantik Mandiri','Pemantauan kondisi lingkungan','Laporan','Jumantik Mandiri',Icons.health_and_safety_outlined),
     ('Riwayat Pengajuan','Pantau perkembangan pengajuan Anda','Laporan','Riwayat',Icons.fact_check_outlined),
     ('Pengaduan Warga','Hubungi petugas Kelurahan Cikoko','Laporan','Hubungi Kami',Icons.campaign_outlined),
     ('Layanan Pemerintahan','Daftar layanan instansi terkait','Lainnya','Katalog DKI',Icons.account_balance_outlined),

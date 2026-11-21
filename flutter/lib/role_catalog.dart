@@ -27,7 +27,9 @@ const roleFeatures = <String,RoleFeature>{
   'surat_wilayah': RoleFeature('Surat Wilayah','Verifikasi permohonan dari wilayah tugas','Surat Wilayah'),
   'wilayah_ketua': RoleFeature('Wilayah Ketua RT/RW','Tetapkan wilayah akun Ketua RT/RW resmi','Wilayah Ketua RT/RW',capability:'role:manage'),
   'history': RoleFeature('Riwayat Pengajuan','Status surat dan laporan Anda','Riwayat'),
-  'jumantik': RoleFeature('Laporan Jumantik','Upload foto pemeriksaan lingkungan','Laporan Jumantik',capability:'report:jumantik'),
+  'jumantik': RoleFeature('Jumantik Mandiri','Pelaporan mandiri dengan format warga terpisah','Jumantik Mandiri'),
+  'jumantik_rt_rw': RoleFeature('Laporan Jumantik RT/RW','Foto pemeriksaan dengan koordinator dan wilayah akun','Laporan Jumantik RT/RW'),
+  'jumantik_news': RoleFeature('Berita Jumantik Cikoko','Hasil pemeriksaan lingkungan yang dipublikasikan','Berita Jumantik Cikoko'),
   'kegiatan': RoleFeature('Laporan Kegiatan','Kirim laporan dan foto kegiatan','Laporan Kegiatan',capability:'report:kegiatan'),
   'lpj_rt': RoleFeature('Laporan LPJ RT','Keuangan, persetujuan Ketua dan Bendahara RT','Laporan LPJ RT'),
   'lpj_rw': RoleFeature('Laporan LPJ RW','Keuangan, persetujuan Ketua dan Bendahara RW','Laporan LPJ RW'),
@@ -108,7 +110,7 @@ const capabilityMenuBindings = <String,List<String>>{
  'chat:reply':['chat_admin'],
  'reports:view':['verify'],
  'report:kegiatan':['kegiatan'],
- 'report:jumantik':['jumantik'],
+ 'report:jumantik':['jumantik_rt_rw'],
  'report:fkdm':['fkdm'],
  'report:lmk':['lmk'],
  'report:posyandu':['posyandu'],
@@ -123,10 +125,15 @@ const capabilityMenuBindings = <String,List<String>>{
 };
 List<RoleFeature> modulesForRole(String role, Map<String,bool> caps) {
  final names=<String>{...(roleMenus[role]??roleMenus['warga']!)};
+ if(role!='admin')names.add('jumantik');
+ if(role=='jumantik_rt'||role=='jumantik_rw')names.add('jumantik_rt_rw');
+ names.add('jumantik_news');
  for(final entry in capabilityMenuBindings.entries) {
   if(caps[entry.key]==true)names.addAll(entry.value);
  }
  return names.map((key)=>roleFeatures[key]!)
-  .where((feature)=>feature.capability==null || caps[feature.capability]==true)
+  .where((feature)=>(feature.capability==null || caps[feature.capability]==true) &&
+    (feature.route!='Laporan Jumantik RT/RW' || role=='jumantik_rt'||role=='jumantik_rw') &&
+    (feature.route!='Jumantik Mandiri' || role!='admin'))
   .toList();
 }

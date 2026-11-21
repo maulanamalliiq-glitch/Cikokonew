@@ -28,6 +28,7 @@ import 'cikoko_staff_guides.dart';
 import 'structured_drawer.dart';
 import 'integrated_services.dart';
 import 'service_requirements.dart';
+import 'cikoko_jumantik_2605.dart';
 import 'waris_requirements.dart';
 import 'admin_accounts.dart';
 import 'mobile_editor.dart';
@@ -422,7 +423,7 @@ class _HomeState extends State<HomePage> {
     finally {if(mounted)setState(()=>loading=false);}
   }
   bool get guest=>api.token==null;
-  bool _needsLogin(String route)=>route=='Surat Ahli Waris'||route=='Surat Pengantar RT/RW'||route.startsWith('Laporan ')||route=='Jumantik Warga'||route=='Riwayat'||route=='Verifikasi Laporan'||route=='Verifikasi Ahli Waris'||route=='Laporan Kegiatan Admin'||route=='Hubungi Kami'||route=='Edit Profil';
+  bool _needsLogin(String route)=>route=='Surat Ahli Waris'||route=='Surat Pengantar RT/RW'||route.startsWith('Laporan ')||route=='Jumantik Warga'||route=='Jumantik Mandiri'||route=='Laporan Jumantik RT/RW'||route=='Riwayat'||route=='Verifikasi Laporan'||route=='Verifikasi Ahli Waris'||route=='Laporan Kegiatan Admin'||route=='Hubungi Kami'||route=='Edit Profil';
   Future<void> openLogin() async {
     if(!mounted)return;
     final loggedIn=await Navigator.of(context).push<bool>(MaterialPageRoute<bool>(
@@ -473,7 +474,7 @@ class _HomeState extends State<HomePage> {
     'Berita & Kegiatan'=>Icons.newspaper_outlined,'Pengumuman'=>Icons.campaign_outlined,
     'Layanan Online'=>Icons.widgets_outlined,'Galeri'=>Icons.photo_library_outlined,
     'Surat Ahli Waris'=>Icons.description_outlined,'Persyaratan Ahli Waris'=>Icons.fact_check_outlined,'Surat Pengantar RT/RW'=>Icons.markunread_mailbox_outlined,
-    'Surat Wilayah'=>Icons.fact_check_outlined,'Wilayah Ketua RT/RW'=>Icons.location_city_outlined,'Laporan Jumantik'=>Icons.bug_report_outlined,
+    'Surat Wilayah'=>Icons.fact_check_outlined,'Wilayah Ketua RT/RW'=>Icons.location_city_outlined,'Laporan Jumantik'=>Icons.bug_report_outlined,'Laporan Jumantik RT/RW'=>Icons.bug_report_outlined,'Jumantik Mandiri'=>Icons.health_and_safety_outlined,'Berita Jumantik Cikoko'=>Icons.newspaper_outlined,
     'Jumantik Warga'=>Icons.bug_report_outlined,'Laporan Kegiatan'=>Icons.assignment_outlined,'Laporan Kegiatan Admin'=>Icons.assignment_turned_in_outlined,'Verifikasi Ahli Waris'=>Icons.verified_user_outlined,
     'Laporan LPJ RT'=>Icons.receipt_long_outlined,'Laporan LPJ RW'=>Icons.receipt_long_outlined,'Laporan LPJ LMK'=>Icons.receipt_long_outlined,
     'Laporan FKDM'=>Icons.shield_outlined,'Laporan LMK'=>Icons.groups_outlined,
@@ -609,7 +610,17 @@ class _HomeState extends State<HomePage> {
     case 'Surat Wilayah':return RtRwLettersPage(api:api);
     case 'TTD & Stempel':return RtRwSignerPage(api:api);
     case 'Wilayah Ketua RT/RW':return RtRwOfficerManager(api:api);
-    case 'Laporan Jumantik':return _v6Form('Laporan Jumantik','Laporan pemantauan jentik lingkungan.',const ReportForm(kind:'jumantik'));
+    case 'Laporan Jumantik':
+    case 'Laporan Jumantik RT/RW':
+      return Jumantik2605Api.isStaff(role)
+        ?JumantikRtRw2605(api:api)
+        :const Center(child:Text('Form khusus akun Jumantik RT/RW.'));
+    case 'Jumantik Mandiri':
+      return role!='admin'&&!guest
+        ?const JumantikMandiri2605()
+        :const Center(child:Text('Menu ini khusus akun selain Super Admin.'));
+    case 'Berita Jumantik Cikoko':
+      return const JumantikNews2605();
     case 'Alur PTSP':return role=='ptsp'
         ? const CikokoStaffGuidePage(role:'ptsp')
         : const Center(child:Text('Khusus petugas PTSP.'));
