@@ -14,11 +14,11 @@ on:
       version_name:
         description: 'Nama versi untuk build baru'
         type: string
-        default: '2.6.5'
+        default: '2.6.8'
       version_code:
         description: 'Harus lebih tinggi dari version code tertinggi di Play Console'
         type: string
-        default: '2605'
+        default: '2608'
 
 permissions:
   contents: read
@@ -62,6 +62,9 @@ jobs:
           php qa/hardcheck_routes_2571_test.php
           php qa/notification_flow_2572_test.php
           php qa/role_permissions_smoke.php
+          php qa/app_update_policy_2606_test.php
+          php qa/jumantik_mandiri_2607_test.php
+          php qa/google_login_2608_test.php
           php qa/asn_permissions_test.php
           php qa/staff_ptsp_sosial_asn_test.php
           php qa/superadmin_access_2580_test.php
@@ -78,7 +81,7 @@ jobs:
     name: Build APK ARM64 dan AAB signed
     needs: verify
     if: >-
-      github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && inputs.build_release) || (github.event_name == 'push' && github.event.head_commit.message == 'ci: build Cikokonew release 2605'))
+      github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && inputs.build_release) || (github.event_name == 'push' && github.event.head_commit.message == 'ci: build Cikokonew release 2608'))
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -87,8 +90,8 @@ jobs:
       CIKOKO_KEY_PASSWORD: ${{ secrets.CIKOKO_KEY_PASSWORD }}
       CIKOKO_KEY_ALIAS: androidkey
       EXPECTED_CERT: 394633E6A2F4C91C150D81B228908562D230D763031A0A0C205618B9D669D4E5
-      RELEASE_NAME: ${{ inputs.version_name || '2.6.5' }}
-      RELEASE_CODE: ${{ inputs.version_code || '2605' }}
+      RELEASE_NAME: ${{ inputs.version_name || '2.6.6' }}
+      RELEASE_CODE: ${{ inputs.version_code || '2606' }}
     steps:
       - uses: actions/checkout@v4
       - name: Periksa ketersediaan signing secrets
@@ -148,7 +151,7 @@ jobs:
       - name: Simpan APK dan AAB
         uses: actions/upload-artifact@v4
         with:
-          name: CikokoSmart-${{ inputs.version_code || '2605' }}-APK-AAB
+          name: CikokoSmart-${{ inputs.version_code || '2606' }}-APK-AAB
           path: dist/*
           if-no-files-found: error
           retention-days: 30
@@ -157,9 +160,9 @@ jobs:
         run: rm -f "$CIKOKO_KEYSTORE_PATH"
 
   apk-preview:
-    name: Build APK ARM64 + AAB Jumantik RT/RW 2605 (tanpa publikasi otomatis)
+    name: Build APK ARM64 + AAB Jumantik RT/RW 2608 (tanpa publikasi otomatis)
     needs: verify
-    if: github.event_name == 'pull_request' && github.head_ref == 'feat/jumantik-rt-rw-2605' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && github.head_ref == 'feat/google-login-2608' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -168,8 +171,8 @@ jobs:
       CIKOKO_KEY_PASSWORD: ${{ secrets.CIKOKO_KEY_PASSWORD }}
       CIKOKO_KEY_ALIAS: androidkey
       EXPECTED_CERT: 394633E6A2F4C91C150D81B228908562D230D763031A0A0C205618B9D669D4E5
-      RELEASE_NAME: 2.6.5
-      RELEASE_CODE: '2605'
+      RELEASE_NAME: 2.6.8
+      RELEASE_CODE: '2608'
     steps:
       - uses: actions/checkout@v4
       - name: Periksa keystore lama untuk APK uji
@@ -198,7 +201,7 @@ jobs:
           flutter-version: '3.41.5'
           channel: stable
           cache: true
-      - name: Validasi versi final aplikasi 2605
+      - name: Validasi versi final aplikasi 2608
         run: |
           set -euo pipefail
           python3 scripts/set_build_version.py
@@ -237,7 +240,7 @@ jobs:
       - name: Upload APK FINAL dan AAB (tanpa rilis Play Store)
         uses: actions/upload-artifact@v4
         with:
-          name: CikokoSmart-FINAL-2605-APK-AAB
+          name: CikokoSmart-FINAL-2608-APK-AAB
           path: dist/*
           if-no-files-found: error
           retention-days: 30
@@ -248,7 +251,9 @@ jobs:
   server-patch:
     name: Paket pembaruan cPanel tanpa konfigurasi privat
     needs: verify
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: >-
+      (github.ref == 'refs/heads/main' && github.event_name != 'pull_request') ||
+      (github.event_name == 'pull_request' && (github.head_ref == 'feat/google-login-2608' || github.head_ref == 'fix/google-profile-sync-2609') && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -259,6 +264,14 @@ jobs:
           cp cpanel/roles-lib.php server-patch/roles-lib.php
           cp cpanel/mobile-api/permissions.php server-patch/mobile-api/
           cp cpanel/mobile-api/index.php server-patch/mobile-api/
+          cp cpanel/mobile-api/app_update_policy_2606.php server-patch/mobile-api/
+          cp cpanel/mobile-api/jumantik-2605.php server-patch/mobile-api/
+          cp cpanel/mobile-api/jumantik_mandiri_2607.php server-patch/mobile-api/
+          cp cpanel/mobile-api/google_auth_2608.php server-patch/mobile-api/
+          cp cpanel/mobile-api/google_login_2608.php server-patch/mobile-api/
+          cp cpanel/mobile-api/notification_recipients.php server-patch/mobile-api/
+          mkdir -p server-patch/templates
+          cp cpanel/mobile-api/private/app_update_policy_2606.json server-patch/templates/app_update_policy_2606.example.json
           cp cpanel/mobile-api/chat_v2548.php server-patch/mobile-api/
           cp cpanel/mobile-api/chat_storage_2544.php server-patch/mobile-api/
           cp cpanel/mobile-api/chat_hardcheck_2565.php server-patch/mobile-api/
@@ -270,6 +283,9 @@ jobs:
           cp cpanel/mobile-api/boarding_houses.php server-patch/mobile-api/
           cp cpanel/mobile-api/pppk_staff.php server-patch/mobile-api/
           mkdir -p server-patch/sql
+          cp cpanel/mobile-api/migrate_jumantik_2606.sql server-patch/sql/
+          cp cpanel/mobile-api/migrate_jumantik_mandiri_2607.sql server-patch/sql/
+          cp cpanel/mobile-api/migrate_google_login_2608.sql server-patch/sql/
           cp cpanel/mobile-api/migrate_pppk_staff_2570.sql server-patch/sql/
           cp cpanel/mobile-api/migrate_reviews_2571.sql server-patch/sql/
           cp cpanel/mobile-api/migrate_chat_2544.sql server-patch/sql/
@@ -279,12 +295,58 @@ jobs:
           cp cpanel/mobile-api/pjlp_attendance_2557.php server-patch/mobile-api/
           cp cpanel/mobile-api/pjlp_shifts_2558.php server-patch/mobile-api/
           cp cpanel/mobile-api/pjlp_leave.php server-patch/mobile-api/
-          printf '%s\n' 'CikokoSmart 2580 mobile-api PATCH' '1. Backup public_html/mobile-api and its database first.' '2. Copy the CONTENTS of mobile-api/ into existing public_html/mobile-api/ (not the entire public_html).' '3. Do not erase private/, bootstrap.php, ahli-waris/config.php, database or uploaded files.' '4. Keep the production signing and admin credentials unchanged.' '5. Verify chat_v2548_status and authenticated chat_v2548_diagnostic before testing real chat.' '7. Import sql/migrate_pppk_staff_2570.sql after a database backup; never import schema.sql over production.' '8. Import sql/migrate_reviews_2571.sql, then confirm review_public returns HTTP 200 and ok=true.' '9. Check deployment_status returns api_release 2580. The chat status must respond 200 even without login.' '10. For missing chat tables import sql/migrate_chat_2544.sql then sql/migrate_chat_extras_2571.sql after backup. Never overwrite existing messages.' '11. After inspecting affected rows, optionally import sql/migrate_notifications_2572.sql to restore old PJLP leave alerts from private to personal scope.' '12. For PTSP and SOSIAL accounts, backup roles-lib.php and portal_users first. The updated roles-lib.php is required on public_html; update only after reviewing differences from the live site.' '13. Only Admin Utama may create PTSP/SOSIAL accounts. Do not insert account credentials directly into SQL.' '14. Super Admin website permission panel (deployed separately) uses mobile_role_permissions; no role SQL migration is required. Chat role grants require updated chat_offline_bot_2545.php.' '6. This patch does NOT repair an invalid database primary key automatically; if chat_id_auto_increment=false, inspect the existing schema and backup before migration.' > server-patch/README.txt
+          printf '%s\n' 'CikokoSmart 2608 mobile-api PATCH (terbatas)' 'UPDATE 2608: Do not overwrite private/app_update_policy_2606.json. Only the example in templates/ is included; live configuration remains untouched.' 'FIRST RELEASE: Keep force_update=false and minimum_supported_build=0. Set minimum to 2608 and force=true only after 2608 is fully available in Play Store to everyone.' 'The website and live API can differ from this repository. Backup and review index.php, roles-lib.php and data before uploading. Verify admin account creation and Jumantik admin moderation on staging.' '1. Backup public_html/mobile-api and its database first.' '2. Copy the CONTENTS of mobile-api/ into existing public_html/mobile-api/ (not the entire public_html).' '3. Do not erase private/, bootstrap.php, ahli-waris/config.php, database or uploaded files.' '4. Keep the production signing and admin credentials unchanged.' '5. Verify chat_v2548_status and authenticated chat_v2548_diagnostic before testing real chat.' '7. Import sql/migrate_pppk_staff_2570.sql after a database backup; never import schema.sql over production.' '8. Import sql/migrate_reviews_2571.sql, then confirm review_public returns HTTP 200 and ok=true.' '9. Check deployment_status returns api_release 2580. The chat status must respond 200 even without login.' '10. For missing chat tables import sql/migrate_chat_2544.sql then sql/migrate_chat_extras_2571.sql after backup. Never overwrite existing messages.' '11. After inspecting affected rows, optionally import sql/migrate_notifications_2572.sql to restore old PJLP leave alerts from private to personal scope.' '12. For PTSP and SOSIAL accounts, backup roles-lib.php and portal_users first. The updated roles-lib.php is required on public_html; update only after reviewing differences from the live site.' '13. Only Admin Utama may create PTSP/SOSIAL accounts. Do not insert account credentials directly into SQL.' '14. Super Admin website permission panel (deployed separately) uses mobile_role_permissions; no role SQL migration is required. Chat role grants require updated chat_offline_bot_2545.php.' '6. This patch does NOT repair an invalid database primary key automatically; if chat_id_auto_increment=false, inspect the existing schema and backup before migration.' > server-patch/README.txt
       - name: Unggah patch API terpisah dari APK
         uses: actions/upload-artifact@v4
         with:
-          name: CikokoSmart-2580-MobileAPI-Patch
+          name: CikokoSmart-2608-MobileAPI-Patch
           path: server-patch/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Buat paket aman khusus Jumantik Mandiri Warga (tanpa file website lain)
+        run: |
+          set -euo pipefail
+          mkdir -p jumantik-mandiri-safe/mobile-api jumantik-mandiri-safe/sql
+          cp cpanel/mobile-api/jumantik_mandiri_2607.php jumantik-mandiri-safe/mobile-api/
+          cp cpanel/mobile-api/notification_recipients.php jumantik-mandiri-safe/mobile-api/
+          cp cpanel/mobile-api/migrate_jumantik_mandiri_2607.sql jumantik-mandiri-safe/sql/
+          printf '%s\n' 'CIKOKO JUMANTIK MANDIRI 2607 - PATCH TERBATAS' '1. Backup mobile-api/notification_recipients.php, database dan private/ dulu.' '2. Impor SQL baru hanya setelah backup, atau pastikan API mempunyai izin CREATE.' '3. Upload file baru mobile-api/jumantik_mandiri_2607.php ke public_html/mobile-api/.' '4. Bandingkan notification_recipients.php dengan file live sebelum mengganti; jika live berbeda, gabungkan dua kategori publik: jumantik_mandiri_terbaru dan jumantik_rt_rw_terbaru.' '5. JANGAN hapus atau overwrite mobile-api/private, mobile-api/index.php, bootstrap.php, roles-lib.php dan laporan JSON lama.' '6. Uji akun warga, pengiriman form/foto, verifikasi Super Admin dan notifikasi personal dan publik.' '7. File APK/AAB tetap harus melalui Play Store. Aktifkan update wajib HANYA setelah versi target sepenuhnya tersedia.' > jumantik-mandiri-safe/README.txt
+      - name: Unggah patch cPanel aman Jumantik Mandiri 2607
+        uses: actions/upload-artifact@v4
+        with:
+          name: CikokoSmart-2608-JumantikMandiri-API-SAFE
+          path: jumantik-mandiri-safe/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Siapkan patch Google Login 2608 yang aman (tanpa index.php)
+        run: |
+          set -euo pipefail
+          mkdir -p google-login-safe/mobile-api google-login-safe/sql
+          cp cpanel/mobile-api/google_auth_2608.php google-login-safe/mobile-api/
+          cp cpanel/mobile-api/google_login_2608.php google-login-safe/mobile-api/
+          cp cpanel/mobile-api/migrate_google_login_2608.sql google-login-safe/sql/
+          printf '%s\n' 'CIKOKO GOOGLE LOGIN 2608 - PATCH TERBATAS' '1. Backup database dan folder mobile-api sebelum memasang.' '2. Import SQL baru mobile_google_accounts_2608 melalui phpMyAdmin; jangan hapus tabel lama.' '3. Upload dua file BARU ke public_html/mobile-api/: google_auth_2608.php dan google_login_2608.php.' '4. TIDAK perlu mengubah index.php, bootstrap.php, private/, portal_users, atau password lama.' '5. Google Sign-In harus diaktifkan pada konfigurasi proyek Firebase/Google Cloud, dan SHA-1 Play App Signing serta sertifikat upload harus cocok dengan OAuth Android.' '6. Uji login baru WARGA dan hubungkan akun lama lewat Profil setelah login username/password.' '7. Admin Utama tidak dapat ditautkan secara otomatis. Hak akun lain tidak berubah.' '8. Unggah AAB signed 2608 ke Play Console setelah lulus uji dan versionCode lebih tinggi dari rilis tertinggi.' '9. Aktifkan pembaruan wajib dari server hanya SETELAH rilis 2608 tersedia penuh bagi pengguna yang dituju.' > google-login-safe/README.txt
+      - name: Unggah patch aman Google Login 2608
+        uses: actions/upload-artifact@v4
+        with:
+          name: CikokoSmart-2608-GoogleLogin-API-SAFE
+          path: google-login-safe/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Siapkan perbaikan profil Google saja (tanpa database atau API lain)
+        run: |
+          set -euo pipefail
+          mkdir -p google-profile-2609/mobile-api
+          cp cpanel/mobile-api/google_auth_2608.php google-profile-2609/mobile-api/
+          printf '%s\n' 'CIKOKO GOOGLE PROFILE SYNC - PATCH PHP SATU FILE' '1. Khusus server dengan Login Google 2608 yang sudah berjalan.' '2. Backup public_html/mobile-api/google_auth_2608.php dan data/profil sebelum overwrite.' '3. Ekstrak isi paket di public_html/ agar mengganti mobile-api/google_auth_2608.php SAJA.' '4. Tidak ada SQL baru, tidak ada perubahan APK/AAB, index.php, password, role, RT/RW, atau laporan.' '5. Keluar dari aplikasi dan login ulang melalui Google untuk memicu penyalinan foto jika foto Cikoko masih kosong.' '6. Bila Google tidak memiliki klaim picture atau foto tidak dapat diunduh, login tetap berhasil dan foto lama tidak berubah.' '7. Nama/email hanya diisi jika kosong. Telepon, alamat, NIK, dan wilayah harus dilengkapi manual.' '8. Pastikan PHP curl/openssl aktif dan folder mobile-api/private dapat ditulis PHP.' > google-profile-2609/PANDUAN.txt
+      - name: Unggah ZIP patch profil Google satu file
+        uses: actions/upload-artifact@v4
+        with:
+          name: CikokoSmart-2608-GoogleProfil-FIX-SAFE
+          path: google-profile-2609/
           if-no-files-found: error
           retention-days: 30
 
