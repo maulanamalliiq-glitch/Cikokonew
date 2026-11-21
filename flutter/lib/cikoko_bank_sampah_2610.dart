@@ -149,6 +149,7 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
   Map<String, dynamic> members = {};
   Map<String, dynamic> summary = {};
   Map<String, dynamic> selectedSession = {};
+  Map<String, dynamic> archive2026 = {};
   int? sessionId;
 
   bool get canManage => permissions['can_manage'] == true;
@@ -181,6 +182,7 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
       Map<String, dynamic> membersData = {};
       Map<String, dynamic> myData = {};
       Map<String, dynamic> sessionData = {};
+      Map<String, dynamic> archiveData = {};
       int? nextSession = sessionId;
       if (access['can_view_full'] == true) {
         final responses = await Future.wait([
@@ -191,6 +193,15 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
           CikokoBankSampahApi2610.call(widget.api, 'members'),
         ]);
         dash = responses[0]; annualData = responses[1]; membersData = responses[2];
+        if(year==2026 && access['can_manage']==true){
+          try{
+            archiveData=await CikokoBankSampahApi2610.call(
+              widget.api,'archive_2026');
+          }catch(_){
+            // Other Bank Sampah features remain usable if the
+            // historical archive endpoint is not installed yet.
+          }
+        }
         final sessions = records(dash, 'sessions');
         if (sessions.isEmpty) {
           nextSession = null;
@@ -208,6 +219,7 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
       if (mounted) setState(() {
         permissions = access; dashboard = dash; annual = annualData;
         members = membersData; summary = myData; selectedSession = sessionData;
+        archive2026 = archiveData;
         sessionId = nextSession; loading = false;
       });
     } catch (e) {
@@ -606,6 +618,94 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
     message('Rekap ' + year.toString() + ' disalin. Tempel ke Excel.');
   }
 
+
+  Future<void> verifyArchiveMember(Map<String,dynamic> source) async {
+    if(!canManage)return;
+    final candidateAccounts=records(members,'items')
+      .where((u)=>u['role']=='pjlp'||u['role']=='pppk').toList();
+    if(candidateAccounts.isEmpty){
+      message('Belum ada akun PJLP atau PPPK untuk dicocokkan.');return;
+    }
+    String? chosen;
+    final approved=await showDialog<String>(context:context,builder:(dialog)=>
+      StatefulBuilder(builder:(dialog,setDialog)=>AlertDialog(
+        title:const Text('Verifikasi Nama Excel 2026'),
+        content:Column(mainAxisSize:MainAxisSize.min,
+          crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Text('Nama pada Excel: '+source['source_member_name'].toString(),
+            style:const TextStyle(fontWeight:FontWeight.bold)),
+          const SizedBox(height:9),
+          const Text('Pilih akun sebenarnya. Pastikan identitas pegawai '
+            'sama; jika belum pasti, jangan tautkan.',
+            style:TextStyle(fontSize:12,color:Colors.blueGrey)),
+          const SizedBox(height:10),
+          DropdownButtonFormField<String>(
+            isExpanded:true,initialValue:chosen,
+            decoration:const InputDecoration(
+              labelText:'Akun PJLP/PPPK',border:OutlineInputBorder()),
+            items:[
+              for(final user in candidateAccounts)
+                DropdownMenuItem<String>(
+                  value:user['id'].toString(),
+                  child:Text(user['name'].toString()+' · '+
+                    user['role'].toString().toUpperCase(),
+                    overflow:TextOverflow.ellipsis)),
+            ],
+            onChanged:(value)=>setDialog(()=>chosen=value),
+          ),
+        ]),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(dialog),
+            child:const Text('Batalkan')),
+          FilledButton(onPressed:chosen==null?null:
+            ()=>Navigator.pop(dialog,chosen),
+            child:const Text('Verifikasi & Tautkan')),
+        ],
+      )));
+    if(approved==null||!mounted)return;
+    await act('archive_link_set',{
+      'source_member_name':source['source_member_name'],
+      'member_user_id':approved,
+    });
+  }
+
+  Widget archiveMappingPanel(){
+    if(!canManage||year!=2026)return const SizedBox.shrink();
+    final mappings=records(archive2026,'member_mapping');
+    if(mappings.isEmpty){
+      return const Card(child:ListTile(
+        leading:Icon(Icons.folder_outlined),
+        title:Text('Verifikasi arsip penimbangan 2026'),
+        subtitle:Text('Belum ada data arsip 2026 yang bisa diverifikasi. '
+          'Pastikan SQL impor sudah dimasukkan melalui phpMyAdmin.')));
+    }
+    final unresolved=mappings.where((m)=>m['matched_user_id']==null).toList();
+    return ExpansionTile(
+      key:const Key('bank_sampah_archive_map_2617'),
+      title:const Text('Verifikasi Nama Arsip Excel 2026'),
+      subtitle:Text(unresolved.isEmpty
+        ?'Semua nama telah cocok dengan akun PJLP/PPPK.'
+        :unresolved.length.toString()+
+          ' nama belum cocok dengan akun; perlu pemeriksaan Admin.'),
+      children:[
+        const Padding(padding:EdgeInsets.symmetric(horizontal:14,vertical:7),
+          child:Text('Nama lengkap yang cocok secara unik dihitung otomatis. '
+            'Hanya nama yang belum cocok ditautkan manual oleh Admin. '
+            'Tidak mengubah nama, akun, atau rincian Excel.',
+            style:TextStyle(fontSize:11.3,color:Colors.blueGrey))),
+        for(final source in unresolved)
+          ListTile(dense:true,
+            title:Text(source['source_member_name'].toString()),
+            subtitle:Text(source['total_rows'].toString()+
+              ' rincian · Identitas belum terverifikasi'),
+            trailing:OutlinedButton(
+              onPressed:()=>verifyArchiveMember(source),
+              child:const Text('Tautkan')),
+          ),
+      ],
+    );
+  }
+
   Widget annualPanel() {
     final months = records(annual, 'months');
     final membersRows = records(annual, 'members');
@@ -670,6 +770,7 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
               padding: EdgeInsets.all(12),
               child: Text('Halaman monitoring Bank Sampah. ASN/Lurah hanya dapat melihat laporan, bukan mengubah data.'))),
             membersPanel(),
+            archiveMappingPanel(),
             sessionPanel(),
             const SizedBox(height: 14),
             annualPanel(),
