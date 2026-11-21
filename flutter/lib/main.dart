@@ -34,6 +34,7 @@ import 'jumantik_review_2606.dart';
 import 'cikoko_jumantik_mandiri_2607.dart';
 import 'cikoko_google_auth_2608.dart';
 import 'cikoko_bank_sampah_2610.dart';
+import 'cikoko_reports_workspace_2611.dart';
 import 'waris_requirements.dart';
 import 'admin_accounts.dart';
 import 'mobile_editor.dart';
@@ -576,7 +577,8 @@ class _HomeState extends State<HomePage> {
         child:const Icon(Icons.chat_bubble_outline_rounded))
       :null,
   ));
-  Widget _page(){switch(section){
+  Widget _page()=>_pageForRoute(section);
+  Widget _pageForRoute(String section){switch(section){
     case 'Dashboard':return home();
      case 'Modul Dinamis':return CikokoDynamicModulesPage(api:api,role:role);
     case 'Kehadiran PPPK':
@@ -612,9 +614,9 @@ class _HomeState extends State<HomePage> {
       return role=='admin'||role=='admin_kelurahan'
         ?CikokoAdminPushPage(api:api,onSent:refresh)
         :const Center(child:Text('Menu ini hanya untuk administrator.'));
-    case 'Laporan Terpadu':return V6ReportsHub(
-      role:role,guest:guest,modules:modules,counts:letterCounts,
-      navigate:switchTo,letterStatus:(value)=>showPublicLetterStatus(context,api,category:value));
+    case 'Laporan Terpadu':return CikokoReportsWorkspace2611(
+      role:role,guest:guest,modules:modules,letterCounts:letterCounts,
+      navigate:switchTo,buildReport:_pageForRoute);
     case 'Tentang Kami':return V6AboutPage(api:api,navigate:switchTo);
     case 'Menu Cikoko':return menuPage();
     case 'Berita & Kegiatan':return V6NewsPage(api:api,content:items,onOpen:_openV5Article);
