@@ -249,7 +249,9 @@ jobs:
   server-patch:
     name: Paket pembaruan cPanel tanpa konfigurasi privat
     needs: verify
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: >-
+      (github.ref == 'refs/heads/main' && github.event_name != 'pull_request') ||
+      (github.event_name == 'pull_request' && github.head_ref == 'feat/cikoko-update-jumantik-package-2606' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
