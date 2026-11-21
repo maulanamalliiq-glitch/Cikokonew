@@ -52,9 +52,10 @@ class CikokoApi {
   Map<String,dynamic>? profile;
   Future<void> restore() async { token = await _storage.read(key:'cikoko_token'); if(token!=null) {try {profile = (await call('me'))['user'] as Map<String,dynamic>?;}catch(_) {/* Saat server sementara tidak tersedia, jangan hapus sesi tersimpan. */}} }
   Future<Map<String,dynamic>> call(String action, {Map<String,dynamic>? body, bool authorized = false}) async {
-    final target=action.startsWith('chat_v2548_')?root.replaceFirst('index.php','chat_v2548.php')
+    final target=action.startsWith('google_')?root.replaceFirst('index.php','google_login_2608.php'):
+      (action.startsWith('chat_v2548_')?root.replaceFirst('index.php','chat_v2548.php')
       :(action.startsWith('admin_push_')?root.replaceFirst('index.php','admin_push.php')
-      :(action.startsWith('v211_')?root.replaceFirst('index.php','v211.php'):root));
+      :(action.startsWith('v211_')?root.replaceFirst('index.php','v211.php'):root)));
     final u=Uri.parse('$target?action=$action');
     final progressId=body!=null?CikokoRequestProgress.begin():null;
     var successful=false;
