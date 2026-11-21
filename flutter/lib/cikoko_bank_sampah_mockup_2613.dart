@@ -8,6 +8,8 @@ class CikokoBankSampahMockup2613 extends StatefulWidget {
   final Map<String,dynamic> session;
   final List<Map<String,dynamic>> entries;
   final List<Map<String,dynamic>> members;
+  final List<Map<String,dynamic>> availableSessions;
+  final ValueChanged<int> onSelectSession;
   final String officerName;
   final bool canInput;
   final bool canManage;
@@ -17,7 +19,8 @@ class CikokoBankSampahMockup2613 extends StatefulWidget {
 
   const CikokoBankSampahMockup2613({
     super.key,required this.session,required this.entries,
-    required this.members,required this.officerName,
+    required this.members,required this.availableSessions,
+    required this.onSelectSession,required this.officerName,
     required this.canInput,required this.canManage,
     required this.request,required this.reload,required this.notify,
   });
@@ -281,15 +284,30 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
         line('Hari',const Text('Minggu',style:TextStyle(
           fontWeight:FontWeight.w800,color:deepBlue))),
         line('Tanggal',Container(
-          padding:const EdgeInsets.symmetric(horizontal:10,vertical:10),
+          padding:const EdgeInsets.symmetric(horizontal:10,vertical:1),
           decoration:BoxDecoration(border:Border.all(color:border),
             borderRadius:BorderRadius.circular(8)),
           child:Row(children:[
             const Icon(Icons.calendar_month_outlined,color:navy,size:18),
             const SizedBox(width:8),
-            Expanded(child:Text(_tanggal(widget.session['session_date'].toString()),
-              style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600))),
-            const Icon(Icons.check_circle_outline,size:16,color:green),
+            Expanded(child:DropdownButtonHideUnderline(
+              child:DropdownButton<int>(
+                key:const Key('bank_sampah_date_2613'),
+                value:sessionId,isExpanded:true,
+                style:const TextStyle(color:deepBlue,
+                  fontSize:12,fontWeight:FontWeight.w700),
+                items:widget.availableSessions.map((s)=>
+                  DropdownMenuItem<int>(
+                    value:int.tryParse((s['id']??'0').toString())??0,
+                    child:Text(_tanggal(s['session_date'].toString()),
+                      overflow:TextOverflow.ellipsis),
+                  ),
+                ).toList(),
+                onChanged:busy?null:(id){
+                  if(id!=null&&id!=sessionId)widget.onSelectSession(id);
+                },
+              ),
+            )),
           ]),
         )),
         line('Petugas',Container(
