@@ -93,19 +93,20 @@ function ckbs_users():array {
     return $out;
 }
 function ckbs_member_init(PDO $db,array $users):void {
-    // One-time roster snapshot: include all active PJLP/PPPK. Once initialized,
-    // removing a member never makes them reappear automatically.
+    // Staff roster follows existing active PJLP/PPPK accounts each year.
+    // INSERT IGNORE only adds genuinely new accounts; an Admin-disabled
+    // member retains active=0 and is NEVER reactivated automatically.
     $db->beginTransaction();
     try{
         $cfg=$db->query('SELECT members_initialized FROM mobile_bank_sampah_config_2610
          WHERE id=1 FOR UPDATE')->fetch(PDO::FETCH_ASSOC);
+        $insert=$db->prepare('INSERT IGNORE INTO mobile_bank_sampah_members_2610
+             (user_id,active,assigned_by) VALUES (?,1,"system-2614")');
+        foreach($users as $u){
+            if($u['active']&&in_array($u['role'],CKBS_ROLE_MEMBER,true))
+                $insert->execute([$u['id']]);
+        }
         if(empty($cfg['members_initialized'])){
-            $insert=$db->prepare('INSERT IGNORE INTO mobile_bank_sampah_members_2610
-              (user_id,active,assigned_by) VALUES (?,1,"system-2610")');
-            foreach($users as $u){
-                if($u['active']&&in_array($u['role'],CKBS_ROLE_MEMBER,true))
-                    $insert->execute([$u['id']]);
-            }
             $db->exec('UPDATE mobile_bank_sampah_config_2610
                  SET members_initialized=1 WHERE id=1');
         }
