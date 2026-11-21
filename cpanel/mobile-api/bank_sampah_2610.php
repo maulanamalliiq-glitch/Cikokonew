@@ -118,7 +118,7 @@ function ckbs_only_role(array $actor,array $roles):void {
 }
 function ckbs_officer(PDO $db,array $actor):bool {
     if($actor['user_role']==='admin')return true;
-    if($actor['user_role']!=='pjlp')return false;
+    if(!in_array((string)$actor['user_role'],CKBS_ROLE_MEMBER,true))return false;
     $q=$db->prepare('SELECT 1 FROM mobile_bank_sampah_officers_2610
       WHERE user_id=? AND active=1 LIMIT 1');
     $q->execute([(string)$actor['user_id']]);
@@ -318,7 +318,7 @@ if($action==='member_set'||$action==='officer_set'){
     $id=mobile_text($b['user_id']??'',80);$active=$b['active']??null;
     if(!is_bool($active))mobile_error('Status keanggotaan harus aktif/tidak.',422);
     $candidate=$users[$id]??null;
-    $allowed=$action==='member_set'?CKBS_ROLE_MEMBER:['pjlp'];
+    $allowed=CKBS_ROLE_MEMBER; // Anggota dan petugas dapat berasal dari PJLP maupun PPPK.
     if($candidate===null||!in_array($candidate['role'],$allowed,true)||
        ($active&&!$candidate['active']))
         mobile_error('Pilih akun pegawai aktif yang sesuai kewenangan.',422);
@@ -326,12 +326,12 @@ if($action==='member_set'||$action==='officer_set'){
     $db->beginTransaction();
     try{
         if($active && $action==='officer_set'){
-            // Serialize assignments for max 5 PJLP Bank Sampah.
+            // Batasi total maksimal lima petugas aktif gabungan PJLP dan PPPK.
             $db->query('SELECT id FROM mobile_bank_sampah_config_2610 WHERE id=1 FOR UPDATE')->fetch();
             $count=(int)$db->query('SELECT COUNT(*) FROM mobile_bank_sampah_officers_2610 WHERE active=1')->fetchColumn();
             $exists=$db->prepare('SELECT active FROM mobile_bank_sampah_officers_2610 WHERE user_id=?');
             $exists->execute([$id]);$old=$exists->fetchColumn();
-            if($count>=5 && (string)$old!=='1')mobile_error('Maksimal lima petugas PJLP Bank Sampah.',422);
+            if($count>=5 && (string)$old!=='1')mobile_error('Maksimal lima petugas Bank Sampah gabungan PJLP dan PPPK.',422);
         }
         $q=$db->prepare("INSERT INTO {$table} (user_id,active,assigned_by)
           VALUES(?,?,?) ON DUPLICATE KEY UPDATE active=VALUES(active),
@@ -402,7 +402,7 @@ if($action==='entry_void'){
     mobile_json(['ok'=>true,'message'=>'Baris dibatalkan tanpa menghapus riwayat database.']);
 }
 if($action==='entry_save'){
-    if(!ckbs_officer($db,$actor))mobile_error('Hanya petugas Bank Sampah yang ditunjuk Admin dapat mengisi timbangan.',403);
+    if(!ckbs_officer($db,$actor))mobile_error('Hanya petugas PJLP/PPPK yang ditunjuk Admin dapat mengisi timbangan.',403);
     $sessionId=ckbs_id($b['session_id']??null);
     $memberId=mobile_text($b['member_user_id']??'',80);
     $member=$users[$memberId]??null;
