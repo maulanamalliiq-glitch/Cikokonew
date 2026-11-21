@@ -74,6 +74,26 @@ void main() {
     expect(notifications.any((x)=>x.contains('Draft tersimpan')),isTrue);
   });
 
+  testWidgets('Weekday reflects a chosen non-Sunday weighing date', (tester)async{
+    await tester.binding.setSurfaceSize(const Size(390,950));
+    addTearDown(()=>tester.binding.setSurfaceSize(null));
+    const monday='2026-03-02';
+    final chosen=<String,dynamic>{
+      'id':12,'session_date':monday,'status':'closed',
+    };
+    await tester.pumpWidget(MaterialApp(home:Scaffold(
+      body:SingleChildScrollView(child:CikokoBankSampahMockup2613(
+        session:chosen,availableSessions:[chosen],
+        entries:const [],members:members,
+        officerName:'Petugas PJLP',canInput:false,canManage:false,
+        onSelectSession:(_){},request:(a,b)async=>{},
+        reload:()async{},notify:(_){},
+      )),
+    )));
+    expect(find.text('Senin'),findsOneWidget);
+    expect(find.text('2 Maret 2026'),findsOneWidget);
+  });
+
   testWidgets('Non-officers can see mockup totals but cannot modify any entry',
     (tester) async {
     await tester.binding.setSurfaceSize(const Size(440,900));
