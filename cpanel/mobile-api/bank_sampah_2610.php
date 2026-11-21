@@ -323,7 +323,7 @@ $method=(string)($_SERVER['REQUEST_METHOD']??'GET');
 $methods=[
  'public_activity'=>'GET','archive_2026'=>'GET','status'=>'GET','summary'=>'GET','dashboard'=>'GET','members'=>'GET','schedule'=>'GET',
  'session_entries'=>'GET','annual'=>'GET','annual_csv'=>'GET',
- 'member_set'=>'POST','officer_set'=>'POST','config_set'=>'POST',
+ 'archive_link_set'=>'POST','member_set'=>'POST','officer_set'=>'POST','config_set'=>'POST',
  'session_create'=>'POST','session_submit'=>'POST','session_status'=>'POST','entry_save'=>'POST','entry_void'=>'POST'
 ];
 if(!isset($methods[$action]))mobile_error('Layanan Bank Sampah tidak tersedia.',404);
@@ -451,8 +451,30 @@ if($action==='archive_2026'){
        COALESCE(SUM(weight_kg),0) AS weight_kg,
        COALESCE(SUM(amount_rp),0) AS amount_rp
        FROM mobile_bank_sampah_archive_entries_2026 GROUP BY review_status');
-    mobile_json(['ok'=>true,'year'=>2026,'sessions'=>$s,'status_summary'=>$q->fetchAll(PDO::FETCH_ASSOC),
-       'message'=>'Rincian perlu pemeriksaan tidak termasuk total resmi.']);
+    $response=['ok'=>true,'year'=>2026,'sessions'=>$s,
+       'status_summary'=>$q->fetchAll(PDO::FETCH_ASSOC),
+       'message'=>'Rincian perlu pemeriksaan tidak termasuk total resmi.'];
+    if($admin){
+        $identity=ckbs_archive_identity_map($db,$users);
+        $names=$db->query('SELECT source_member_name,COUNT(*) AS total_rows
+             FROM mobile_bank_sampah_archive_entries_2026
+             WHERE review_status="confirmed"
+             GROUP BY source_member_name ORDER BY source_member_name')
+             ->fetchAll(PDO::FETCH_ASSOC);
+        $mapping=[];
+        foreach($names as $n){
+            $source=(string)$n['source_member_name'];
+            $userId=ckbs_archive_match_account($source,$identity);
+            $mapping[]=[
+                'source_member_name'=>$source,'total_rows'=>(int)$n['total_rows'],
+                'matched_user_id'=>$userId,
+                'matched_name'=>$userId===null?null:(string)$users[$userId]['name'],
+                'verified_manually'=>isset($identity['manual'][$source]),
+            ];
+        }
+        $response['member_mapping']=$mapping;
+    }
+    mobile_json($response);
 }
 if($action==='annual'||$action==='annual_csv'){
     if(!$full)mobile_error('Hanya petugas, ASN atau Admin dapat membaca rekap tahunan.',403);
@@ -501,6 +523,27 @@ if($action==='annual'||$action==='annual_csv'){
 if(!$admin && !in_array($action,['entry_save','session_submit','session_create'],true))
     mobile_error('Pengaturan Bank Sampah hanya untuk Admin Utama.',403);
 $b=mobile_body();
+if($action==='archive_link_set'){
+    // Super Admin explicitly resolves abbreviated/different names in Excel.
+    // Links are auditable; never alter original Excel records or staff IDs.
+    $source=mobile_text($b['source_member_name']??'',160);
+    $memberId=mobile_text($b['member_user_id']??'',80);
+    if($source===''||$memberId==='')mobile_error('Pilih nama pada Excel dan akun pegawai.',422);
+    $target=$users[$memberId]??null;
+    if($target===null||!in_array((string)$target['role'],CKBS_ROLE_MEMBER,true))
+        mobile_error('Akun tujuan harus PJLP atau PPPK yang ada.',422);
+    $q=$db->prepare('SELECT 1 FROM mobile_bank_sampah_archive_entries_2026
+      WHERE source_member_name=? AND review_status="confirmed" LIMIT 1');
+    $q->execute([$source]);
+    if(!$q->fetchColumn())mobile_error('Nama dari arsip 2026 tidak ditemukan.',404);
+    $db->prepare('INSERT INTO mobile_bank_sampah_archive_member_links_2026
+         (source_member_name,user_id,verified_by) VALUES (?,?,?)
+         ON DUPLICATE KEY UPDATE user_id=VALUES(user_id),
+           verified_by=VALUES(verified_by),verified_at=CURRENT_TIMESTAMP')
+       ->execute([$source,$memberId,$uid]);
+    mobile_json(['ok'=>true,
+      'message'=>'Nama arsip berhasil ditautkan. Saldo akun yang sesuai kini diperbarui.']);
+}
 if($action==='member_set'||$action==='officer_set'){
     $id=mobile_text($b['user_id']??'',80);$active=$b['active']??null;
     if(!is_bool($active))mobile_error('Status keanggotaan harus aktif/tidak.',422);
