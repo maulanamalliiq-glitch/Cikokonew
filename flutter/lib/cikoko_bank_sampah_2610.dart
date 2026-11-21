@@ -268,7 +268,7 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
       totalsCard(summary, 'Hasil Bank Sampah Saya · ' + year.toString()),
       const Card(child: Padding(
         padding: EdgeInsets.all(14),
-        child: Text('Penimbangan dicatat oleh petugas PJLP yang ditunjuk Admin. '
+        child: Text('Penimbangan dicatat oleh petugas PJLP atau PPPK yang ditunjuk Admin. '
           'Rekap nama barang dan laporan lengkap dapat dilihat oleh ASN dan Admin.'),
       )),
     ],
@@ -498,7 +498,7 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
     return ExpansionTile(
       title: const Text('Kelola Anggota dan Petugas Bank Sampah'),
       subtitle: Text('Petugas aktif: ' + officers.toString() +
-        '/5. Pilih 4–5 PJLP. Semua PJLP/PPPK bisa menjadi anggota.'),
+        '/5. Pilih 4–5 petugas dari PJLP atau PPPK. Semua PJLP/PPPK bisa menjadi anggota.'),
       children: [
         const Padding(padding: EdgeInsets.all(12), child: Text(
           'Menghapus keanggotaan hanya menonaktifkan daftar Bank Sampah. '
@@ -512,7 +512,7 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
             onChanged: (v) => act('member_set',
               {'user_id': u['id'], 'active': v}),
           ),
-          if (u['role'] == 'pjlp') SwitchListTile(
+          if (u['role'] == 'pjlp' || u['role'] == 'pppk') SwitchListTile(
             dense: true,
             contentPadding: const EdgeInsets.only(left: 34, right: 16),
             title: const Text('Petugas Bank Sampah (ditunjuk Admin)'),
@@ -600,7 +600,7 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
           if (!canSeeAll) mySummary(),
           if (canSeeAll) ...[
             if (canInput) const Card(child: Padding(padding: EdgeInsets.all(12),
-              child: Text('Petugas PJLP: isikan jenis barang dan hasil timbang. '
+              child: Text('Petugas PJLP/PPPK: isikan jenis barang dan hasil timbang. '
                 'Rupiah dapat diperbarui pada baris yang masih terbuka.'))),
             if (!canInput && !canManage) const Card(child: Padding(
               padding: EdgeInsets.all(12),
