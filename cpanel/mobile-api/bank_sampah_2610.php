@@ -215,7 +215,7 @@ function ckbs_archive_report_name(string $source):string {
 // Abbreviated, duplicate, or external names require explicit Admin review.
 function ckbs_archive_normalize_name(string $name):string {
     $name=(string)preg_replace('/\\s+/u',' ',trim($name));
-    return mb_strtolower($name,'UTF-8');
+    return function_exists('mb_strtolower')?mb_strtolower($name,'UTF-8'):strtolower($name);
 }
 function ckbs_archive_identity_map(PDO $db,array $users):array {
     $unique=[];
