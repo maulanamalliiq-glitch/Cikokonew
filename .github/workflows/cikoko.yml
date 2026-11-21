@@ -14,11 +14,11 @@ on:
       version_name:
         description: 'Nama versi untuk build baru'
         type: string
-        default: '2.6.14'
+        default: '2.6.16'
       version_code:
         description: 'Harus lebih tinggi dari version code tertinggi di Play Console'
         type: string
-        default: '2614'
+        default: '2616'
 
 permissions:
   contents: read
@@ -69,6 +69,7 @@ jobs:
           php qa/bank_sampah_2610_test.php
           php qa/bank_sampah_mockup_2613_test.php
           php qa/home_bank_sampah_2614_test.php
+          php qa/bank_sampah_archive_2616_test.php
           php qa/navbar_laporan_2611_test.php
           php qa/asn_permissions_test.php
           php qa/staff_ptsp_sosial_asn_test.php
@@ -165,9 +166,9 @@ jobs:
         run: rm -f "$CIKOKO_KEYSTORE_PATH"
 
   apk-preview:
-    name: Build APK ARM64 + AAB Beranda & Bank Sampah 2614 (tanpa publikasi otomatis)
+    name: Build APK ARM64 + AAB Bank Sampah Tanggal Petugas 2616 (tanpa publikasi otomatis)
     needs: verify
-    if: github.event_name == 'pull_request' && github.head_ref == 'feat/home-activity-bank-roster-2614' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && github.head_ref == 'feat/bank-sampah-arsip-2026-tanggal-petugas-2616' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -176,8 +177,8 @@ jobs:
       CIKOKO_KEY_PASSWORD: ${{ secrets.CIKOKO_KEY_PASSWORD }}
       CIKOKO_KEY_ALIAS: androidkey
       EXPECTED_CERT: 394633E6A2F4C91C150D81B228908562D230D763031A0A0C205618B9D669D4E5
-      RELEASE_NAME: 2.6.14
-      RELEASE_CODE: '2614'
+      RELEASE_NAME: 2.6.16
+      RELEASE_CODE: '2616'
     steps:
       - uses: actions/checkout@v4
       - name: Periksa keystore lama untuk APK uji
@@ -206,7 +207,7 @@ jobs:
           flutter-version: '3.41.5'
           channel: stable
           cache: true
-      - name: Validasi versi final aplikasi 2614
+      - name: Validasi versi final aplikasi 2616
         run: |
           set -euo pipefail
           python3 scripts/set_build_version.py
@@ -245,7 +246,7 @@ jobs:
       - name: Upload APK FINAL dan AAB (tanpa rilis Play Store)
         uses: actions/upload-artifact@v4
         with:
-          name: CikokoSmart-FINAL-2614-APK-AAB
+          name: CikokoSmart-FINAL-2616-APK-AAB
           path: dist/*
           if-no-files-found: error
           retention-days: 30
@@ -258,7 +259,7 @@ jobs:
     needs: verify
     if: >-
       (github.ref == 'refs/heads/main' && github.event_name != 'pull_request') ||
-      (github.event_name == 'pull_request' && (github.head_ref == 'feat/google-login-2608' || github.head_ref == 'fix/google-profile-sync-2609' || github.head_ref == 'feat/home-activity-bank-roster-2614') && github.event.pull_request.head.repo.full_name == github.repository)
+      (github.event_name == 'pull_request' && (github.head_ref == 'feat/google-login-2608' || github.head_ref == 'fix/google-profile-sync-2609' || github.head_ref == 'feat/bank-sampah-arsip-2026-tanggal-petugas-2616') && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -306,7 +307,7 @@ jobs:
       - name: Unggah patch API terpisah dari APK
         uses: actions/upload-artifact@v4
         with:
-          name: CikokoSmart-2614-MobileAPI-Patch
+          name: CikokoSmart-2616-MobileAPI-Patch
           path: server-patch/
           if-no-files-found: error
           retention-days: 30
@@ -363,11 +364,11 @@ jobs:
           mkdir -p bank-sampah-2610-safe/mobile-api bank-sampah-2610-safe/sql
           cp cpanel/mobile-api/bank_sampah_2610.php bank-sampah-2610-safe/mobile-api/
           cp cpanel/mobile-api/migrate_bank_sampah_2610.sql bank-sampah-2610-safe/sql/
-          printf '%s\n' 'BANK SAMPAH CIKOKO 2610 - PATCH AMAN, HANYA FILE BARU' '1. Backup database dan seluruh mobile-api terlebih dahulu.' '2. Impor hanya sql/migrate_bank_sampah_2610.sql ke database lama; tidak perlu menghapus tabel.' '3. Ekstrak ZIP di public_html: file baru mobile-api/bank_sampah_2610.php akan ditambahkan.' '4. Jangan mengganti index.php, bootstrap.php, private/, roles-lib.php, portal_users, atau database PJLP/PPPK.' '5. Hanya Admin Utama yang menambah/menghapus anggota (nonaktif daftar, bukan menghapus akun) dan menunjuk maksimal 5 petugas gabungan PJLP/PPPK.' '6. Admin membuat jadwal Minggu ke-2 dan ke-4 (2x per bulan), atau ubah jadwal menjadi 1x per 2 bulan.' '7. Petugas Bank Sampah PJLP/PPPK mengisi nama barang, Kg, Rp; menyimpan draft atau mengirim untuk pengesahan Admin. ASN dan Lurah baca penuh, PJLP/PPPK ringkasan di bawah foto Profil.' '8. Untuk tampilan Beranda 2614 dibutuhkan APK/AAB baru; server saja tidak menambah UI Flutter pada APK lama.' '9. Uji pada staging: role, daftar anggota, petugas, jadwal, 2.5 Kg, Rp, rekap 2026, notifikasi dan histori sebelum produksi.' '10. Jangan aktifkan update wajib sampai rilis baru tersedia di Play Store.' > bank-sampah-2610-safe/PETUNJUK-PASANG.txt
+          printf '%s\n' 'BANK SAMPAH CIKOKO 2610 - PATCH AMAN, HANYA FILE BARU' '1. Backup database dan seluruh mobile-api terlebih dahulu.' '2. Impor hanya sql/migrate_bank_sampah_2610.sql ke database lama; tidak perlu menghapus tabel.' '3. Ekstrak ZIP di public_html: file baru mobile-api/bank_sampah_2610.php akan ditambahkan.' '4. Jangan mengganti index.php, bootstrap.php, private/, roles-lib.php, portal_users, atau database PJLP/PPPK.' '5. Hanya Admin Utama yang menambah/menghapus anggota (nonaktif daftar, bukan menghapus akun) dan menunjuk maksimal 5 petugas gabungan PJLP/PPPK.' '6. Admin membuat jadwal Minggu ke-2 dan ke-4 (2x per bulan), atau ubah jadwal menjadi 1x per 2 bulan.' '7. Petugas Bank Sampah PJLP/PPPK mengisi nama barang, Kg, Rp; menyimpan draft atau mengirim untuk pengesahan Admin. ASN dan Lurah baca penuh, PJLP/PPPK ringkasan di bawah foto Profil.' '8. Tanggal penimbangan pilihan petugas membutuhkan APK/AAB build 2616. Arsip penimbangan 2026 harus diimpor melalui paket SQL 2026 setelah backup.' '9. Uji pada staging: role, daftar anggota, petugas, jadwal, 2.5 Kg, Rp, rekap 2026, notifikasi dan histori sebelum produksi.' '10. Jangan aktifkan update wajib sampai rilis baru tersedia di Play Store.' > bank-sampah-2610-safe/PETUNJUK-PASANG.txt
       - name: Unggah ZIP cPanel Bank Sampah aman 2610
         uses: actions/upload-artifact@v4
         with:
-          name: CikokoSmart-2614-BankSampah-Activity-API-SAFE
+          name: CikokoSmart-2616-BankSampah-API-SAFE
           path: bank-sampah-2610-safe/
           if-no-files-found: error
           retention-days: 30
