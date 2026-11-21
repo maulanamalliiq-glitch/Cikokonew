@@ -195,6 +195,27 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
     }
   }
 
+  Future<void> _switchDate(int nextId) async {
+    if(busy||nextId==sessionId)return;
+    if(rows.any((r)=>r.dirty)){
+      final confirm=await showDialog<bool>(
+        context:context,builder:(ctx)=>AlertDialog(
+          title:const Text('Simpan draft sebelum pindah tanggal?'),
+          content:const Text('Ada perubahan baris yang belum tersimpan. '
+            'Simpan dahulu agar tidak hilang saat membuka tanggal lain.'),
+          actions:[
+            TextButton(onPressed:()=>Navigator.pop(ctx,false),
+              child:const Text('Tetap di sini')),
+            FilledButton(onPressed:()=>Navigator.pop(ctx,true),
+              child:const Text('Simpan Draft')),
+          ],
+        ));
+      if(confirm!=true||!mounted)return;
+      if(!await _saveDraft(announce:false))return;
+    }
+    if(mounted)widget.onSelectSession(nextId);
+  }
+
   Future<void> _draft(){
     final ok=await _saveDraft();
     if(ok&&mounted)await widget.reload();
@@ -304,7 +325,7 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
                   ),
                 ).toList(),
                 onChanged:busy?null:(id){
-                  if(id!=null&&id!=sessionId)widget.onSelectSession(id);
+                  if(id!=null&&id!=sessionId)_switchDate(id);
                 },
               ),
             )),
