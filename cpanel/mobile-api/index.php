@@ -249,7 +249,7 @@ if($action==='me'){
 }
 // Manajemen akun: hak eksklusif Admin Utama. Penghapusan akun tidak
 // menghapus laporan/arsip historis yang diperlukan untuk audit.
-if(in_array($action,['accounts_list','accounts_create','accounts_delete','accounts_email_update','accounts_password_reset','accounts_status_update'],true)){
+if(in_array($action,['accounts_list','accounts_create','accounts_delete','accounts_email_update','accounts_password_reset','accounts_status_update','accounts_jumantik_area_update'],true)){
  if((string)$u['user_role']!=='admin')mobile_error('Hanya Admin Utama yang dapat mengelola akun petugas.',403);
  if($action==='accounts_list'&&$method==='GET'){
   $items=[];
@@ -259,7 +259,8 @@ if(in_array($action,['accounts_list','accounts_create','accounts_delete','accoun
     'username'=>(string)($entry['username']??''),'role'=>(string)($entry['role']??''),
     'rt'=>(string)($entry['rt']??''),'rw'=>(string)($entry['rw']??''),
     'active'=>(bool)($entry['active']??false),
-    'email'=>(string)($entry['email']??'')];
+    'email'=>(string)($entry['email']??''),
+    'jumantik_coordinator'=>(string)($entry['jumantik_coordinator']??'')];
   }
   mobile_json(['ok'=>true,'roles'=>portal_roles(),'items'=>$items]);
  }
@@ -347,6 +348,50 @@ if(in_array($action,['accounts_list','accounts_create','accounts_delete','accoun
   flock($fp,LOCK_UN);fclose($fp);
   $db->prepare('DELETE FROM mobile_password_otps WHERE user_id=?')->execute([$id]);
   mobile_json(['ok'=>true,'message'=>'Email akun petugas berhasil diperbarui.']);
+ }
+ if($action==='accounts_jumantik_area_update'){
+  $id=mobile_text($b['id']??'',80);
+  $newRt=mobile_text($b['rt']??'',12);
+  $newRw=mobile_text($b['rw']??'',12);
+  $newCoordinator=mobile_text($b['jumantik_coordinator']??'',120);
+  if($id===''||!preg_match('/^[0-9]{1,3}$/D',$newRt)||
+     !preg_match('/^[0-9]{1,3}$/D',$newRw)||
+     mobile_strlen($newCoordinator)<3)
+   mobile_error('Isi RT, RW dan Koordinator Jumantik yang valid.',422);
+  $path=data_path('portal_users');
+  $fp=@fopen($path,'c+');
+  if(!$fp||!flock($fp,LOCK_EX)){
+   if($fp)fclose($fp);
+   mobile_error('Data akun sedang digunakan.',503);
+  }
+  $original='';
+  try{
+   rewind($fp);
+   $original=stream_get_contents($fp);
+   $entries=json_decode($original?:'[]',true,512,JSON_THROW_ON_ERROR);
+   if(!is_array($entries))throw new RuntimeException('Invalid accounts');
+   $found=false;
+   foreach($entries as &$entry){
+    if((string)($entry['id']??'')!==$id)continue;
+    if(!in_array((string)($entry['role']??''),['jumantik_rt','jumantik_rw'],true))
+     mobile_error('Hanya akun Jumantik RT/RW yang dapat diubah.',403);
+    $entry['rt']=$newRt;$entry['rw']=$newRw;
+    $entry['jumantik_coordinator']=$newCoordinator;
+    $found=true;break;
+   }unset($entry);
+   if(!$found)mobile_error('Akun Jumantik tidak ditemukan.',404);
+   $json=json_encode($entries,JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT|
+     JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
+   rewind($fp);
+   if(!ftruncate($fp,0)||fwrite($fp,$json)!==strlen($json)||!fflush($fp))
+    throw new RuntimeException('Failed to persist area');
+  }catch(Throwable $e){
+   if($original!==''){rewind($fp);ftruncate($fp,0);fwrite($fp,$original);fflush($fp);}
+   flock($fp,LOCK_UN);fclose($fp);
+   throw $e;
+  }
+  flock($fp,LOCK_UN);fclose($fp);
+  mobile_json(['ok'=>true,'message'=>'Wilayah dan koordinator Jumantik berhasil diperbarui.']);
  }
  if($action==='accounts_create'){
   $name=mobile_text($b['name']??'',120);$username=mobile_text($b['username']??'',80);
