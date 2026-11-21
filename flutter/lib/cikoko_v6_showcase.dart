@@ -4,6 +4,7 @@ import 'role_catalog.dart';
 import 'cikoko_home_sections.dart';
 import 'cikoko_home_extra.dart';
 import 'cikoko_reviews.dart';
+import 'cikoko_activity_updates_2614.dart';
 
 /// Single design vocabulary based on the supplied Cikoko Smart V4 16-screen showcase.
 /// Keep server values and permissions as the source of truth: no demo reports or fake service data.
@@ -438,20 +439,24 @@ class V6Home extends StatelessWidget{
       onAbout:()=>navigate('Tentang Kami'),
       photoUrl:websiteHeroUrl,photoFit:websiteHeroFit,
       photoAlignment:websiteHeroAlignment),
-    const SizedBox(height:12),
-     V6LetterStatusStrip(counts:letterCounts,onStatus:letterStatus),
-     const SizedBox(height:16),
-     // Public home stays compact: full service directory remains on the Layanan tab.
-    V6AnnouncementTicker(items:items,onAll:()=>navigate('Pengumuman')),
+    // Screenshot 3: Berita Terbaru occupies the previous Surat Masuk slot.
     const SizedBox(height:12),
     V6NewsCarousel(items:items,api:api,onOpen:articleTap,
       onAll:()=>navigate('Berita & Kegiatan')),
     const SizedBox(height:12),
+    V6AnnouncementTicker(items:items,onAll:()=>navigate('Pengumuman')),
+    // Status surat now appears immediately below Pengumuman & Agenda.
+    const SizedBox(height:12),
+    V6LetterStatusStrip(counts:letterCounts,onStatus:letterStatus),
+    const SizedBox(height:14),
     V6IntegratedServiceGrid(entries:integratedServices,onOpen:integratedTap),
     const SizedBox(height:12),
     V6BoardingHousePreview(api:api,onAll:()=>navigate('Data Rumah Kos')),
     const SizedBox(height:16),
     V6InnovationPreview(api:api,onAll:()=>navigate('Inovasi')),
+    const SizedBox(height:16),
+    // Screenshot 1: verified/public Jumantik and Bank Sampah activity updates.
+    CikokoActivityUpdates2614(role:role,navigate:navigate),
     const SizedBox(height:17),
     const V6Section(title:'Informasi & Kegiatan'),
     Wrap(spacing:7,runSpacing:7,children:[
