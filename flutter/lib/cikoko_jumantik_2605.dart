@@ -140,7 +140,7 @@ class _JumantikRtRw2605State extends State<JumantikRtRw2605>{
               items:const [
                 DropdownMenuItem(value:'jumantik_rt',child:Text('Jumantik RT')),
                 DropdownMenuItem(value:'jumantik_rw',child:Text('Jumantik RW')),
-              ],onChanged:busy?null:(v){if(v!=null)setState(()=>member=v);}),
+              ],onChanged:null),
             const SizedBox(height:12),
             field(week,'Minggu Ke',max:1,numeric:true),
             field(location,'Lokasi Pemeriksaan',max:220),
@@ -167,7 +167,7 @@ class _JumantikRtRw2605State extends State<JumantikRtRw2605>{
         if(history.isEmpty)const Card(child:Padding(padding:EdgeInsets.all(14),child:Text('Belum ada laporan.'))),
         for(final item in history.whereType<Map>())Card(child:ListTile(
           title:Text((item['tanggal']??'').toString()+' · Jentik '+(item['jentik']??'').toString()),
-          subtitle:Text(item['published']==true?'Sudah diterbitkan':'Menunggu pemeriksaan'))),
+          subtitle:Text(item['status']=='rejected'?'Ditolak':item['published']==true?'Sudah diterbitkan':'Menunggu pemeriksaan'))),
       ]));
     });
   }
