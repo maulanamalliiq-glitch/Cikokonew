@@ -93,6 +93,22 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
         amount:_money(e['amount_rp']),
       ));
     }
+    // Form penyerahan mengikuti daftar anggota pada lembar cetak:
+    // PJLP/PPPK aktif sudah ditampilkan sebagai baris siap isi.
+    // Baris kosong bukan hasil timbang dan tidak dikirim ke database.
+    if(editable){
+      final existing=rows.map((r)=>r.memberId).toSet();
+      for(final member in eligibleMembers){
+        final id=member['id'].toString();
+        if(existing.contains(id))continue;
+        rows.add(_WasteEntry2613(
+          memberId:id,memberName:member['name'].toString(),
+          itemName:'',weight:'',amount:'0',
+        ));
+      }
+      rows.sort((a,b)=>a.memberName.toLowerCase().compareTo(
+        b.memberName.toLowerCase()));
+    }
     lastSignature=jsonEncode(widget.entries);
   }
   @override
@@ -139,6 +155,11 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
     )));
   }
 
+  bool _hasContent(_WasteEntry2613 row)=>
+    row.item.text.trim().isNotEmpty||
+    row.kg.text.trim().isNotEmpty||
+    _amountValue(row.rupiah.text)>0;
+
   String? _validate(_WasteEntry2613 row){
     if(!eligibleMembers.any((m)=>m['id'].toString()==row.memberId)){
       return 'Pilih anggota PJLP/PPPK yang masih aktif.';
@@ -161,15 +182,22 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
   Future<bool> _saveDraft({bool announce=true}) async {
     if(busy)return false;
     if(!editable){widget.notify('Sesi tidak terbuka untuk diubah.');return false;}
-    if(rows.isEmpty){widget.notify('Tambahkan baris hasil timbang terlebih dahulu.');return false;}
+    if(rows.every((r)=>r.id==null&&!_hasContent(r))){
+      widget.notify('Isi nama barang dan hasil timbang pada setidaknya satu anggota.');
+      return false;
+    }
     for(var i=0;i<rows.length;i++){
-      final err=_validate(rows[i]);
+      final row=rows[i];
+      if(row.id==null&&!_hasContent(row))continue;
+      if(row.id!=null&&!row.dirty)continue;
+      final err=_validate(row);
       if(err!=null){widget.notify('Baris '+(i+1).toString()+': '+err);return false;}
     }
     setState(()=>busy=true);
     var saved=0;
     try{
       for(final row in rows){
+        if(row.id==null&&!_hasContent(row))continue;
         if(row.id!=null&&!row.dirty)continue;
         final payload=<String,dynamic>{
           if(row.id!=null)'id':row.id,
@@ -185,8 +213,9 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
         saved++;
       }
       if(!mounted)return false;
-      if(announce)widget.notify('Draft tersimpan: '+rows.length.toString()+
-        ' baris ('+saved.toString()+' perubahan).');
+      if(announce)widget.notify('Draft tersimpan: '+
+        rows.where((r)=>r.id!=null).length.toString()+
+        ' baris hasil timbang ('+saved.toString()+' perubahan).');
       return true;
     }catch(e){
       if(mounted)widget.notify('Sebagian data mungkin tersimpan. Periksa draft: '+e.toString());
@@ -198,7 +227,7 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
 
   Future<void> _switchDate(int nextId) async {
     if(busy||nextId==sessionId)return;
-    if(rows.any((r)=>r.dirty)){
+    if(rows.any((r)=>r.dirty&&(r.id!=null||_hasContent(r)))){
       final confirm=await showDialog<bool>(
         context:context,builder:(ctx)=>AlertDialog(
           title:const Text('Simpan draft sebelum pindah tanggal?'),
@@ -223,7 +252,9 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
   }
   Future<void> _submit() async {
     if(busy||!editable)return;
-    if(rows.isEmpty){widget.notify('Isi minimal satu baris penimbangan.');return;}
+    if(rows.every((r)=>r.id==null&&!_hasContent(r))){
+      widget.notify('Isi minimal satu hasil timbang sebelum mengirim.');return;
+    }
     final confirmed=await showDialog<bool>(
       context:context,builder:(ctx)=>AlertDialog(
         title:const Text('Simpan Penimbangan?'),
