@@ -25,9 +25,18 @@ foreach([
 foreach(['session_date','member_user_id','item_name','weight_kg','amount_rp','updated_by','voided_at'] as $column)
   bank_check(str_contains($sql,$column),'Kolom timbang hilang: '.$column);
 bank_check(str_contains($php,"['pjlp','pppk']"),'Anggota hanya PJLP/PPPK.');
-bank_check(str_contains($php,"['pjlp']"),'Petugas harus PJLP.');
+bank_check(str_contains($php,"in_array((string)$"."actor['user_role'],CKBS_ROLE_MEMBER,true)"),
+  'Petugas PJLP/PPPK harus melalui daftar role anggota.');
+bank_check(str_contains($php,"$"."allowed=CKBS_ROLE_MEMBER;"),
+  'Admin harus dapat menunjuk PPPK dan PJLP sebagai petugas.');
+bank_check(str_contains($dart,"u['role'] == 'pjlp' || u['role'] == 'pppk'"),
+  'Tombol tunjuk petugas harus tersedia untuk PJLP dan PPPK.');
 bank_check(str_contains($php,"count>=5") || str_contains($php,"$"."count>=5"),'Batas petugas lima tidak ada.');
 bank_check(str_contains($php,"ckbs_officer("),'Hak input berdasarkan penunjukan petugas hilang.');
+bank_check(str_contains($php,"'session_submit'")&&str_contains($php,'status="submitted"'),
+  'Hasil timbang harus dapat dikirim petugas untuk pemeriksaan Admin.');
+bank_check(str_contains($php,"if($"."status!=='open')"),'Penimbangan tidak boleh dikirim dua kali.');
+bank_check(str_contains($php,"Maksimal lima petugas"),'Batas 5 PJLP + PPPK hilang.');
 bank_check(str_contains($php,"$"."uid,$"."year.'-01-01'"),'Ringkasan profil harus dibatasi akun/tahun.');
 bank_check(str_contains($php,"$"."s!=='open'"),'Tidak boleh mengubah sesi yang ditutup.');
 bank_check(str_contains($php,"'annual_csv'") && str_contains($php,"'annual'"),'Rekap tahunan belum tersedia.');
