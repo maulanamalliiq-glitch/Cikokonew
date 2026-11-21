@@ -276,8 +276,6 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
 
   Future<void> createSession() async {
     final now = DateTime.now();
-    final suggested = records(dashboard, 'unused');
-    if (suggested.isNotEmpty) {}
     DateTime sunday = DateTime(now.year, now.month, now.day);
     while (sunday.weekday != DateTime.sunday) {
       sunday = sunday.add(const Duration(days: 1));
