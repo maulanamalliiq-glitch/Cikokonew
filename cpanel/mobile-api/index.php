@@ -355,9 +355,14 @@ if(in_array($action,['accounts_list','accounts_create','accounts_delete','accoun
   if(!isset($allowed[$role])||mobile_strlen($name)<3||
     !preg_match('/^[a-zA-Z0-9_.-]{4,40}$/',$username)||strlen($password)<5)
    mobile_error('Periksa nama, username, password dan peran.',422);
-  if(in_array($role,['jumantik_rt','jumantik_rw'],true) &&
-     (trim(mobile_text($b['rt']??'',12))==='' || trim(mobile_text($b['rw']??'',12))===''))
-   mobile_error('Akun Jumantik wajib memiliki RT dan RW.',422);
+  $isJumantik=in_array($role,['jumantik_rt','jumantik_rw'],true);
+  $jumantikRt=mobile_text($b['rt']??'',12);
+  $jumantikRw=mobile_text($b['rw']??'',12);
+  $jumantikCoordinator=mobile_text($b['jumantik_coordinator']??'',120);
+  if($isJumantik && (!preg_match('/^[0-9]{1,3}$/D',$jumantikRt) ||
+      !preg_match('/^[0-9]{1,3}$/D',$jumantikRw) ||
+      mobile_strlen($jumantikCoordinator)<3))
+   mobile_error('Akun Jumantik memerlukan RT, RW (angka) dan nama Koordinator RW.',422);
   $email=mobile_text($b['email']??'',160);
   if(($role==='ppsu'&& !filter_var($email,FILTER_VALIDATE_EMAIL))||($email!==''&&!filter_var($email,FILTER_VALIDATE_EMAIL)))
    mobile_error('Akun PPSU wajib memiliki email yang valid untuk pemulihan OTP.',422);
@@ -369,7 +374,8 @@ if(in_array($action,['accounts_list','accounts_create','accounts_delete','accoun
   $users[]=['id'=>bin2hex(random_bytes(12)),'name'=>$name,'username'=>$username,
    'password_hash'=>password_hash($password,PASSWORD_DEFAULT),'role'=>$role,
    'department'=>(string)$allowed[$role],'rt'=>mobile_text($b['rt']??'',12),
-   'rw'=>mobile_text($b['rw']??'',12),'phone'=>mobile_text($b['phone']??'',40),
+   'rw'=>mobile_text($b['rw']??'',12),'jumantik_coordinator'=>$isJumantik?$jumantikCoordinator:'',
+   'phone'=>mobile_text($b['phone']??'',40),
    'email'=>mobile_text($b['email']??'',160),'active'=>true,'created_at'=>date('c')];
   if(!db_write('portal_users',$users))mobile_error('Akun gagal disimpan.',503);
   mobile_json(['ok'=>true,'message'=>'Akun petugas berhasil dibuat.']);
