@@ -276,23 +276,33 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
   );
 
   Future<void> createSession() async {
-    final now = DateTime.now();
-    DateTime sunday = DateTime(now.year, now.month, now.day);
-    while (sunday.weekday != DateTime.sunday) {
-      sunday = sunday.add(const Duration(days: 1));
-    }
-    final date = await showDatePicker(
-      context: context, initialDate: sunday,
-      firstDate: DateTime(now.year - 2, 1, 1),
-      lastDate: DateTime(now.year + 2, 12, 31),
-      selectableDayPredicate: (d) => d.weekday == DateTime.sunday,
-      helpText: 'Pilih tanggal Minggu untuk Bank Sampah',
+    if(!canInput){message('Hanya petugas Bank Sampah terdaftar yang boleh memilih tanggal.');return;}
+    final now=DateTime.now();
+    final today=DateTime(now.year,now.month,now.day);
+    // Petugas dapat memilih tanggal apa pun mulai hari ini.
+    final date=await showDatePicker(
+      context:context,initialDate:today,
+      firstDate:canManage?DateTime(now.year-2,now.month,now.day):today,
+      lastDate:DateTime(now.year+2,now.month,now.day),
+      helpText:'Pilih tanggal penimbangan Bank Sampah',
+      confirmText:'Gunakan Tanggal',
     );
-    if (date == null) return;
-    final text = date.year.toString().padLeft(4, '0') + '-' +
-        date.month.toString().padLeft(2, '0') + '-' +
-        date.day.toString().padLeft(2, '0');
-    await act('session_create', {'session_date': text, 'note': 'Penimbangan Bank Sampah Cikoko'});
+    if(date==null)return;
+    final text=date.year.toString().padLeft(4,'0')+'-'+
+      date.month.toString().padLeft(2,'0')+'-'+
+      date.day.toString().padLeft(2,'0');
+    try{
+      final created=await CikokoBankSampahApi2610.call(
+        widget.api,'session_create',body:{
+          'session_date':text,'note':'Penimbangan Bank Sampah Cikoko',
+        });
+      message((created['message']??'Tanggal berhasil ditambahkan.').toString());
+      await refresh();
+      final id=int.tryParse((created['id']??'').toString());
+      if(id!=null&&mounted)await changeSession(id);
+    }catch(e){
+      message('Tanggal belum berhasil dipilih: '+cikokoFormalMessage(e));
+    }
   }
 
   Future<void> setCadence(String cadence) async {
@@ -498,18 +508,33 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
                 ],
                 onChanged:(v){if(v!=null)setCadence(v);},
               ),
-              const SizedBox(height:9),
-              OutlinedButton.icon(onPressed:createSession,
-                icon:const Icon(Icons.calendar_month_outlined),
-                label:const Text('Buat Tanggal Penimbangan')),
             ]),
           ),
+        ),
+      if(canInput)
+        Card(
+          margin:const EdgeInsets.only(bottom:12),
+          child:Padding(padding:const EdgeInsets.all(12),
+            child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+              const Text('Tanggal Penimbangan',
+                style:TextStyle(fontSize:14,fontWeight:FontWeight.w800)),
+              const SizedBox(height:5),
+              const Text('Petugas PJLP/PPPK yang ditunjuk dapat memilih tanggal '
+                'kegiatan berikutnya sendiri, tidak terbatas hari Minggu.',
+                style:TextStyle(fontSize:11,color:Colors.blueGrey)),
+              const SizedBox(height:8),
+              OutlinedButton.icon(
+                key:const Key('bank_sampah_choose_any_date_2616'),
+                onPressed:createSession,
+                icon:const Icon(Icons.calendar_month_outlined),
+                label:const Text('Pilih Tanggal Penimbangan Baru')),
+            ])),
         ),
       if(sessions.isEmpty)
         const Card(child:ListTile(
           leading:Icon(Icons.event_busy_outlined),
           title:Text('Belum ada sesi penimbangan'),
-          subtitle:Text('Super Admin membuat tanggal sebelum petugas mengisi data.'))),
+          subtitle:Text('Petugas Bank Sampah yang ditunjuk dapat memilih tanggal pertama.'))),
       if(session.isNotEmpty)
         CikokoBankSampahMockup2613(
           key:ValueKey('bank_form_mockup_2613_'+(sessionId??0).toString()),
