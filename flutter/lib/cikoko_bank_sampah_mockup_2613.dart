@@ -121,7 +121,7 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
   }
   void _modified(_WasteEntry2613 row)=>setState(()=>row.dirty=true);
 
-  double get totalKg=>rows.fold(0,(n,r)=>n+(
+  double get totalKg=>rows.fold<double>(0.0,(n,r)=>n+(
     double.tryParse(r.kg.text.trim().replaceAll(',','.'))??0));
   int get totalRp=>rows.fold(0,(n,r)=>n+_amountValue(r.rupiah.text));
 
@@ -131,6 +131,7 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
       widget.notify('Super Admin perlu mengaktifkan anggota PJLP/PPPK dahulu.');
       return;
     }
+    if(rows.length>=200){widget.notify('Maksimal 200 baris dalam satu sesi.');return;}
     setState(()=>rows.add(_WasteEntry2613(
       memberId:list.first['id'].toString(),
       memberName:list.first['name'].toString(),
@@ -150,7 +151,7 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
       return 'Hasil timbang harus angka Kg positif, maksimal 3 desimal.';
     }
     final amountRaw=row.rupiah.text.trim();
-    if(!RegExp(r'^[0-9.]+$').hasMatch(amountRaw)||
+    if(!RegExp(r'^\d+(?:\.\d{3})*$').hasMatch(amountRaw)||
        _amountValue(amountRaw)>100000000000){
       return 'Jumlah Rupiah harus angka positif atau nol.';
     }
