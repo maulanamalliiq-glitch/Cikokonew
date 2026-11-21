@@ -66,6 +66,7 @@ jobs:
           php qa/jumantik_mandiri_2607_test.php
           php qa/google_login_2608_test.php
           php qa/bank_sampah_2610_test.php
+          php qa/bank_sampah_mockup_2613_test.php
           php qa/navbar_laporan_2611_test.php
           php qa/asn_permissions_test.php
           php qa/staff_ptsp_sosial_asn_test.php
