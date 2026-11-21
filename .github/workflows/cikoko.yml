@@ -268,6 +268,7 @@ jobs:
           cp cpanel/mobile-api/jumantik-2605.php server-patch/mobile-api/
           cp cpanel/mobile-api/jumantik_mandiri_2607.php server-patch/mobile-api/
           cp cpanel/mobile-api/google_auth_2608.php server-patch/mobile-api/
+          cp cpanel/mobile-api/google_login_2608.php server-patch/mobile-api/
           cp cpanel/mobile-api/notification_recipients.php server-patch/mobile-api/
           mkdir -p server-patch/templates
           cp cpanel/mobile-api/private/app_update_policy_2606.json server-patch/templates/app_update_policy_2606.example.json
@@ -316,6 +317,22 @@ jobs:
         with:
           name: CikokoSmart-2608-JumantikMandiri-API-SAFE
           path: jumantik-mandiri-safe/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Siapkan patch Google Login 2608 yang aman (tanpa index.php)
+        run: |
+          set -euo pipefail
+          mkdir -p google-login-safe/mobile-api google-login-safe/sql
+          cp cpanel/mobile-api/google_auth_2608.php google-login-safe/mobile-api/
+          cp cpanel/mobile-api/google_login_2608.php google-login-safe/mobile-api/
+          cp cpanel/mobile-api/migrate_google_login_2608.sql google-login-safe/sql/
+          printf '%s\n' 'CIKOKO GOOGLE LOGIN 2608 - PATCH TERBATAS' '1. Backup database dan folder mobile-api sebelum memasang.' '2. Import SQL baru mobile_google_accounts_2608 melalui phpMyAdmin; jangan hapus tabel lama.' '3. Upload dua file BARU ke public_html/mobile-api/: google_auth_2608.php dan google_login_2608.php.' '4. TIDAK perlu mengubah index.php, bootstrap.php, private/, portal_users, atau password lama.' '5. Google Sign-In harus diaktifkan pada konfigurasi proyek Firebase/Google Cloud, dan SHA-1 Play App Signing serta sertifikat upload harus cocok dengan OAuth Android.' '6. Uji login baru WARGA dan hubungkan akun lama lewat Profil setelah login username/password.' '7. Admin Utama tidak dapat ditautkan secara otomatis. Hak akun lain tidak berubah.' '8. Unggah AAB signed 2608 ke Play Console setelah lulus uji dan versionCode lebih tinggi dari rilis tertinggi.' '9. Aktifkan pembaruan wajib dari server hanya SETELAH rilis 2608 tersedia penuh bagi pengguna yang dituju.' > google-login-safe/README.txt
+      - name: Unggah patch aman Google Login 2608
+        uses: actions/upload-artifact@v4
+        with:
+          name: CikokoSmart-2608-GoogleLogin-API-SAFE
+          path: google-login-safe/
           if-no-files-found: error
           retention-days: 30
 
