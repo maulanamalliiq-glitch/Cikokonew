@@ -322,6 +322,53 @@ function ckbs_entries(PDO $db,int $year,array $users,?int $sessionId=null):array
     }
     return $result;
 }
+/**
+ * Private yearly itemized statement for the authenticated PJLP/PPPK account.
+ * Source of truth is the same for summary and detail, so their Kg/Rp/entry
+ * counts always agree. Caller must pass mobile_auth() user_id, never a GET id.
+ */
+function ckbs_personal_entries(PDO $db,string $uid,int $year,array $users):array {
+    $st=$db->prepare('SELECT e.item_name,e.weight_kg,e.amount_rp,
+          s.session_date,s.status AS session_status
+        FROM mobile_bank_sampah_entries_2610 e
+        JOIN mobile_bank_sampah_sessions_2610 s ON s.id=e.session_id
+        WHERE e.member_user_id=? AND e.voided_at IS NULL
+          AND s.session_date>=? AND s.session_date<?
+        ORDER BY s.session_date DESC,e.id DESC LIMIT 6000');
+    $st->execute([$uid,$year.'-01-01',($year+1).'-01-01']);
+    $items=[];
+    foreach($st->fetchAll(PDO::FETCH_ASSOC) as $entry){
+        $items[]=[
+          'session_date'=>(string)$entry['session_date'],
+          'item_name'=>(string)$entry['item_name'],
+          'weight_kg'=>(string)$entry['weight_kg'],
+          'amount_rp'=>(int)$entry['amount_rp'],
+          'source'=>'aplikasi',
+          'session_status'=>(string)$entry['session_status'],
+        ];
+    }
+    if($year===2026){
+        $identity=ckbs_archive_identity_map($db,$users);
+        foreach(ckbs_archive_confirmed_rows($db) as $entry){
+            if(ckbs_archive_match_account(
+              (string)$entry['source_member_name'],$identity)!==$uid)continue;
+            $items[]=[
+              'session_date'=>(string)$entry['session_date'],
+              'item_name'=>(string)$entry['item_name'],
+              'weight_kg'=>(string)$entry['weight_kg'],
+              'amount_rp'=>(int)$entry['amount_rp'],
+              'source'=>'arsip_2026',
+              'session_status'=>'closed',
+            ];
+        }
+    }
+    // Group chronological sessions; no off-account data is ever returned.
+    usort($items,static function(array $a,array $b):int {
+       return strcmp((string)$b['session_date'],(string)$a['session_date']);
+    });
+    return $items;
+}
+
 function ckbs_totals(array $rows):array {
     $grams=0;$rupiah=0;
     foreach($rows as $r){$grams+=(int)round((float)$r['weight_kg']*1000);$rupiah+=(int)$r['amount_rp'];}
@@ -332,7 +379,7 @@ function ckbs_totals(array $rows):array {
 $action=(string)($_GET['action']??'');
 $method=(string)($_SERVER['REQUEST_METHOD']??'GET');
 $methods=[
- 'public_activity'=>'GET','archive_2026'=>'GET','status'=>'GET','summary'=>'GET','dashboard'=>'GET','members'=>'GET','schedule'=>'GET',
+ 'public_activity'=>'GET','archive_2026'=>'GET','status'=>'GET','summary'=>'GET','personal_entries'=>'GET','dashboard'=>'GET','members'=>'GET','schedule'=>'GET',
  'session_entries'=>'GET','annual'=>'GET','annual_csv'=>'GET',
  'archive_link_set'=>'POST','member_set'=>'POST','officer_set'=>'POST','config_set'=>'POST',
  'session_create'=>'POST','session_submit'=>'POST','session_status'=>'POST','entry_save'=>'POST','entry_void'=>'POST'
@@ -378,35 +425,24 @@ if($action==='status'){
       'can_view_full'=>$full,'can_manage'=>$admin,
       'cadence'=>$cfg['cadence'],'anchor_month'=>(int)$cfg['anchor_month']]);
 }
-if($action==='summary'){
+if($action==='summary'||$action==='personal_entries'){
+    // Always derive the statement from authenticated user ID; never accept
+    // a user ID from query strings, even for an Admin acting as a member.
     ckbs_only_role($actor,CKBS_ROLE_MEMBER);
     $year=ckbs_year($_GET['year']??date('Y'));
-    // Profile headline shows this member's totals for the selected calendar year.
-    $st=$db->prepare('SELECT e.weight_kg,e.amount_rp FROM mobile_bank_sampah_entries_2610 e
-     JOIN mobile_bank_sampah_sessions_2610 s ON s.id=e.session_id
-     WHERE e.member_user_id=? AND e.voided_at IS NULL
-       AND s.session_date>=? AND s.session_date<?');
-    $st->execute([$uid,$year.'-01-01',($year+1).'-01-01']);
-    $rows=$st->fetchAll(PDO::FETCH_ASSOC);
-    $archivedCount=0;
-    if($year===2026){
-        $identity=ckbs_archive_identity_map($db,$users);
-        foreach(ckbs_archive_confirmed_rows($db) as $historical){
-            if(ckbs_archive_match_account(
-                 (string)$historical['source_member_name'],$identity)!==$uid)
-                continue;
-            $rows[]=[
-              'weight_kg'=>(string)$historical['weight_kg'],
-              'amount_rp'=>(int)$historical['amount_rp']
-            ];
-            $archivedCount++;
-        }
+    $items=ckbs_personal_entries($db,$uid,$year,$users);
+    $totals=ckbs_totals($items);
+    if($action==='summary'){
+        mobile_json(['ok'=>true,'year'=>$year,'totals'=>$totals,
+           'note'=>$year===2026?
+             'Termasuk arsip 2026 yang cocok dengan akun dan sudah dikonfirmasi.':
+             'Total dari data penimbangan aplikasi.']);
     }
-    mobile_json(['ok'=>true,'year'=>$year,'totals'=>ckbs_totals($rows),
-       'archived_entries'=>$archivedCount,
-       'note'=>$year===2026?
-         'Arsip lama dihitung hanya jika nama cocok unik atau telah diverifikasi Admin.':
-         'Rekap penimbangan dari data sesi aplikasi.']);
+    $archived=0;
+    foreach($items as $item)if($item['source']==='arsip_2026')$archived++;
+    mobile_json(['ok'=>true,'year'=>$year,'totals'=>$totals,
+      'archived_entries'=>$archived,'items'=>$items,
+      'message'=>'Rincian barang, berat dan rupiah milik akun yang sedang login.']);
 }
 if($action==='members'){
     if(!$full)mobile_error('Hanya petugas, ASN atau Admin dapat melihat daftar anggota.',403);
