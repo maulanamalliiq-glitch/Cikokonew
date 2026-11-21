@@ -69,10 +69,10 @@ function cikoko_jumantik_publishable_photo(PDO $db, string $id): ?string {
 }
 $action = (string)($_GET['action']??'');
 $method = (string)($_SERVER['REQUEST_METHOD']??'GET');
-if (!in_array($action, ['me','submit','news','photo','admin_list','admin_publish'], true)) {
+if (!in_array($action, ['me','submit','news','photo','admin_list','admin_publish','admin_photo'], true)) {
     mobile_error('Endpoint Jumantik tidak ditemukan.', 404);
 }
-if (($action === 'news' || $action === 'photo' || $action === 'me' || $action === 'admin_list') && $method !== 'GET') {
+if (($action === 'news' || $action === 'photo' || $action === 'me' || $action === 'admin_list' || $action === 'admin_photo') && $method !== 'GET') {
     mobile_error('Metode tidak diperbolehkan.', 405);
 }
 if (($action === 'submit' || $action === 'admin_publish') && $method !== 'POST') {
@@ -114,9 +114,22 @@ if ($action === 'news') {
 }
 
 $actor = mobile_auth();
-if ($action === 'admin_list' || $action === 'admin_publish') {
+if ($action === 'admin_list' || $action === 'admin_publish' || $action === 'admin_photo') {
     if ((string)$actor['user_role'] !== 'admin')
         mobile_error('Verifikasi hanya untuk Super Admin.', 403);
+    if ($action === 'admin_photo') {
+        $id = filter_var($_GET['id']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
+        if (!$id) mobile_error('Foto tidak ditemukan.',404);
+        $q = $db->prepare('SELECT photo_name FROM mobile_jumantik_reports WHERE id=?');
+        $q->execute([$id]);
+        $filename = (string)($q->fetchColumn() ?: '');
+        if (!preg_match('/^[a-f0-9]{40}\\.(jpg|png|webp)$/D',$filename) ||
+            !is_file(__DIR__.'/private/'.$filename)) mobile_error('Foto tidak ditemukan.',404);
+        $ext = strtolower(pathinfo($filename,PATHINFO_EXTENSION));
+        header('Content-Type: '.(['jpg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp'][$ext]));
+        readfile(__DIR__.'/private/'.$filename);
+        exit;
+    }
     if ($action === 'admin_list') {
         $q = $db->query('SELECT id,officer_name,officer_role,coordinator,rt,rw,tanggal,
             minggu_ke,lokasi,tempat_umum_lainnya,nama_kepala_keluarga,
