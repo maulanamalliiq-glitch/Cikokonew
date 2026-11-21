@@ -36,8 +36,8 @@ String cikokoGroupForFeature(RoleFeature feature) {
   final route = feature.route.toLowerCase();
   final name = feature.title.toLowerCase();
 
-  // Kategori laporan: LPJ, kegiatan, monitoring dan verifikasi laporan.
-  if (route.startsWith('laporan ') ||
+  // Kategori laporan: LPJ, kegiatan, monitoring, dan Jumantik.
+  if (route == 'jumantik mandiri' || route.startsWith('laporan ') ||
       route.startsWith('lpj ') ||
       route == 'verifikasi kegiatan' ||
       route == 'monitoring wilayah' ||
@@ -66,7 +66,7 @@ String cikokoGroupForFeature(RoleFeature feature) {
     return 'petugas';
   }
 
-  if (route == 'berita & kegiatan' ||
+  if (route == 'berita jumantik cikoko' || route == 'berita & kegiatan' ||
       route == 'pengumuman' ||
       route == 'galeri' ||
       route == 'tambah berita' ||
