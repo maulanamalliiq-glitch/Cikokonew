@@ -26,6 +26,7 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
   final email = TextEditingController();
   final rt = TextEditingController();
   final rw = TextEditingController();
+  final coordinator = TextEditingController();
   final formKey = GlobalKey<FormState>();
 
   Map<String, String> roles = {};
@@ -36,6 +37,7 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
   bool loading = true;
   bool showForm = true;
 
+  bool get isJumantik => selectedRole == 'jumantik_rt' || selectedRole == 'jumantik_rw';
   bool get needsRt => selectedRole == 'rt' ||
       selectedRole == 'bendahara_rt' ||
       selectedRole == 'jumantik_rt' ||
@@ -43,8 +45,7 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
   bool get needsRw => needsRt ||
       selectedRole == 'rw' ||
       selectedRole == 'bendahara_rw' ||
-      selectedRole == 'lmk' ||
-      selectedRole == 'jumantik_rw';
+      selectedRole == 'lmk';
 
   @override
   void initState() {
@@ -54,7 +55,7 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
 
   @override
   void dispose() {
-    for (final controller in [name, username, password, phone, email, rt, rw]) {
+    for (final controller in [name, username, password, phone, email, rt, rw, coordinator]) {
       controller.dispose();
     }
     super.dispose();
@@ -105,10 +106,23 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
         selectedRole != 'bendahara_rt' &&
         selectedRole != 'bendahara_rw') return;
     if (!formKey.currentState!.validate()) return;
-    if ((selectedRole == 'jumantik_rt' || selectedRole == 'jumantik_rw') &&
-        (rt.text.trim().isEmpty || rw.text.trim().isEmpty)) {
+    if (name.text.trim().length < 3 ||
+        !RegExp(r'^[a-zA-Z0-9_.-]{4,40}$').hasMatch(username.text.trim()) ||
+        password.text.length < 5) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Nama minimal 3 huruf, username 4–40 karakter (huruf/angka/._-), dan password minimal 5 karakter.')));
+      return;
+    }
+    if (isJumantik && (rt.text.trim().isEmpty || rw.text.trim().isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Akun Jumantik wajib memiliki RT dan RW.')));
+      return;
+    }
+    if (isJumantik && (coordinator.text.trim().length < 3 ||
+        !RegExp(r'^[0-9]{1,3}$').hasMatch(rt.text.trim()) ||
+        !RegExp(r'^[0-9]{1,3}$').hasMatch(rw.text.trim()))) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Isi Koordinator RW dan nomor RT/RW (1–3 angka).')));
       return;
     }
     setState(() => busy = true);
@@ -122,6 +136,7 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
         'email': email.text.trim(),
         'rt': needsRt ? rt.text.trim() : '',
         'rw': needsRw ? rw.text.trim() : '',
+        'jumantik_coordinator': isJumantik ? coordinator.text.trim() : '',
       });
       if (!mounted) return;
       name.clear();
@@ -131,6 +146,7 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
       email.clear();
       rt.clear();
       rw.clear();
+      coordinator.clear();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Akun petugas berhasil dibuat.')));
       await load();
@@ -352,6 +368,8 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
                       keyboard: TextInputType.number),
                   if (needsRw) field(rw, 'RW', hint: 'Contoh: 001',
                       keyboard: TextInputType.number),
+                  if (isJumantik) field(coordinator, 'Koordinator Jumantik RW',
+                      hint: 'Nama koordinator RW yang ditetapkan Admin'),
                   field(phone, 'Nomor telepon (opsional)', required: false,
                       keyboard: TextInputType.phone),
                   field(email, selectedRole == 'ppsu' ? 'Email PPSU (wajib untuk OTP)' : 'Email (opsional)',
