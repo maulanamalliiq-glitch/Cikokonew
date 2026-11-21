@@ -34,6 +34,7 @@ class _WasteEntry2613 {
   int? id;
   String memberId;
   final String memberName;
+  final bool extra;
   final TextEditingController item;
   final TextEditingController kg;
   final TextEditingController rupiah;
@@ -41,7 +42,7 @@ class _WasteEntry2613 {
   _WasteEntry2613({
     this.id,required this.memberId,required this.memberName,
     required String itemName,required String weight,required String amount,
-    this.dirty=false,
+    this.extra=false,this.dirty=false,
   }) : item=TextEditingController(text:itemName),
        kg=TextEditingController(text:weight),
        rupiah=TextEditingController(text:amount);
@@ -151,7 +152,7 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
     setState(()=>rows.add(_WasteEntry2613(
       memberId:list.first['id'].toString(),
       memberName:list.first['name'].toString(),
-      itemName:'',weight:'',amount:'0',dirty:true,
+      itemName:'',weight:'',amount:'0',extra:true,dirty:true,
     )));
   }
 
@@ -507,7 +508,7 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
                 child:Row(children:[
                   _tableCell(
                     GestureDetector(
-                      onLongPress:entries[i].id==null&&editable?(){
+                      onLongPress:entries[i].id==null&&entries[i].extra&&editable?(){
                         setState((){
                           final removed=rows.removeAt(i);
                           removed.dispose();
