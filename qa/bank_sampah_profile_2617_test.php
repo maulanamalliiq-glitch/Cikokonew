@@ -17,12 +17,12 @@ foreach([
   'AND NOT EXISTS(',
   'if($year===2026)',
   'archived_entries',
-  "if($action==='archive_link_set')",
+  "if($"."action==='archive_link_set')",
   "'archive_link_set'=>'POST'",
   'if($admin){',
   'matched_user_id',
   'verified_manually',
-  "'member_user_id'=>$realId??",
+  "'member_user_id'=>$"."realId??",
 ] as $token)ckbs2617check(str_contains($php,$token),'Missing: '.$token);
 
 ckbs2617check(str_contains($php,'if(array_key_exists($key,$unique))$unique[$key]=null;'),
@@ -30,8 +30,7 @@ ckbs2617check(str_contains($php,'if(array_key_exists($key,$unique))$unique[$key]
 ckbs2617check(str_contains($php,'$identity[\'exact\']')&&
     str_contains($php,'$identity[\'manual\']'),
     'Require exact unique or explicit Admin verification.');
-ckbs2617check(str_contains($php,'$rows[]=[\n              \'weight_kg\'')===false
-    || str_contains($php,"'amount_rp'=>(int)$"."historical['amount_rp']"),
+ckbs2617check(str_contains($php,"'amount_rp'=>(int)$"."historical['amount_rp']"),
     'Summary should combine verified archive and live amounts.');
 ckbs2617check(str_contains($php,"$"."st->fetchAll(PDO::FETCH_ASSOC)"),
     'Never remove existing live session amounts.');
