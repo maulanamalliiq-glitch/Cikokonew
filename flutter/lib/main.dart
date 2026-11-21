@@ -135,8 +135,11 @@ class _LoginState extends State<LoginPage>{final user=TextEditingController(),pa
      await api.googleLogin(idToken);
      if(mounted)widget.onLogin();
    }catch(e){
-     if(mounted&&!CikokoGoogleAuth2608.userCancelled(e)){
-       notify(context,'Login Google gagal: ${cikokoFormalMessage(e)}',error:true);
+     if(mounted){
+       // A Credential Manager OAuth error can appear as "canceled" AFTER
+       // the person picked an account. Do not silently hide that failure.
+       notify(context,'Login Google gagal: '
+         '${CikokoGoogleAuth2608.loginFailureMessage(e)}',error:true);
      }
    }finally{
      if(mounted)setState(()=>busy=false);
