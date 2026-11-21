@@ -14,11 +14,11 @@ on:
       version_name:
         description: 'Nama versi untuk build baru'
         type: string
-        default: '2.6.10'
+        default: '2.6.11'
       version_code:
         description: 'Harus lebih tinggi dari version code tertinggi di Play Console'
         type: string
-        default: '2610'
+        default: '2611'
 
 permissions:
   contents: read
@@ -66,6 +66,7 @@ jobs:
           php qa/jumantik_mandiri_2607_test.php
           php qa/google_login_2608_test.php
           php qa/bank_sampah_2610_test.php
+          php qa/navbar_laporan_2611_test.php
           php qa/asn_permissions_test.php
           php qa/staff_ptsp_sosial_asn_test.php
           php qa/superadmin_access_2580_test.php
@@ -161,9 +162,9 @@ jobs:
         run: rm -f "$CIKOKO_KEYSTORE_PATH"
 
   apk-preview:
-    name: Build APK ARM64 + AAB Bank Sampah 2610 (tanpa publikasi otomatis)
+    name: Build APK ARM64 + AAB Laporan dan Chat 2611 (tanpa publikasi otomatis)
     needs: verify
-    if: github.event_name == 'pull_request' && github.head_ref == 'feat/bank-sampah-pjlp-pppk-2610' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && github.head_ref == 'feat/navbar-laporan-floating-chat-2611' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -172,8 +173,8 @@ jobs:
       CIKOKO_KEY_PASSWORD: ${{ secrets.CIKOKO_KEY_PASSWORD }}
       CIKOKO_KEY_ALIAS: androidkey
       EXPECTED_CERT: 394633E6A2F4C91C150D81B228908562D230D763031A0A0C205618B9D669D4E5
-      RELEASE_NAME: 2.6.10
-      RELEASE_CODE: '2610'
+      RELEASE_NAME: 2.6.11
+      RELEASE_CODE: '2611'
     steps:
       - uses: actions/checkout@v4
       - name: Periksa keystore lama untuk APK uji
@@ -202,7 +203,7 @@ jobs:
           flutter-version: '3.41.5'
           channel: stable
           cache: true
-      - name: Validasi versi final aplikasi 2610
+      - name: Validasi versi final aplikasi 2611
         run: |
           set -euo pipefail
           python3 scripts/set_build_version.py
@@ -241,7 +242,7 @@ jobs:
       - name: Upload APK FINAL dan AAB (tanpa rilis Play Store)
         uses: actions/upload-artifact@v4
         with:
-          name: CikokoSmart-FINAL-2610-APK-AAB
+          name: CikokoSmart-FINAL-2611-APK-AAB
           path: dist/*
           if-no-files-found: error
           retention-days: 30
@@ -254,7 +255,7 @@ jobs:
     needs: verify
     if: >-
       (github.ref == 'refs/heads/main' && github.event_name != 'pull_request') ||
-      (github.event_name == 'pull_request' && (github.head_ref == 'feat/google-login-2608' || github.head_ref == 'fix/google-profile-sync-2609' || github.head_ref == 'feat/bank-sampah-pjlp-pppk-2610') && github.event.pull_request.head.repo.full_name == github.repository)
+      (github.event_name == 'pull_request' && (github.head_ref == 'feat/google-login-2608' || github.head_ref == 'fix/google-profile-sync-2609' || github.head_ref == 'feat/navbar-laporan-floating-chat-2611') && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
