@@ -31,6 +31,7 @@ import 'service_requirements.dart';
 import 'cikoko_jumantik_2605.dart';
 import 'app_update_2606.dart';
 import 'jumantik_review_2606.dart';
+import 'cikoko_jumantik_mandiri_2607.dart';
 import 'waris_requirements.dart';
 import 'admin_accounts.dart';
 import 'mobile_editor.dart';
@@ -252,7 +253,7 @@ class _HomeState extends State<HomePage> {
   String get roleLabel=>role=='guest'?'Portal Publik':(roleNames[role]??role.toUpperCase());
   bool get isStaff=>role!='warga'&&role!='guest';
   bool get isAdmin=>capabilities['reports:view']==true;
-  List<RoleFeature> get modules=>role=='guest'?[roleFeatures['services']!,roleFeatures['waris']!,roleFeatures['waris_requirements']!,roleFeatures['jumantik']!,roleFeatures['news']!,roleFeatures['announcements']!,roleFeatures['gallery']!]:modulesForRole(role,capabilities);
+  List<RoleFeature> get modules=>role=='guest'?[roleFeatures['services']!,roleFeatures['waris']!,roleFeatures['waris_requirements']!,roleFeatures['jumantik']!,roleFeatures['jumantik_mandiri_news']!,roleFeatures['news']!,roleFeatures['announcements']!,roleFeatures['gallery']!]:modulesForRole(role,capabilities);
   @override void initState(){super.initState();load();if(api.token!=null){push=PushService(api);push!.start((){ refresh(); refreshPublishedContent(); },onLocalOpen:(id){
       Map<String,dynamic>? entry;
       for(final candidate in events){
@@ -615,19 +616,25 @@ class _HomeState extends State<HomePage> {
     case 'Laporan Jumantik':
       return Jumantik2605Api.isStaff(role)
         ?JumantikRtRw2605(api:api)
-        :(!guest && role!='admin'
-          ?const JumantikMandiri2605()
+        :(!guest && CikokoJumantikMandiri2607.eligible(role)
+          ?JumantikMandiriWarga2607(api:api)
           :const Center(child:Text('Silakan masuk untuk Jumantik Mandiri.')));
     case 'Laporan Jumantik RT/RW':
       return Jumantik2605Api.isStaff(role)
         ?JumantikRtRw2605(api:api)
         :const Center(child:Text('Form khusus akun Jumantik RT/RW.'));
     case 'Jumantik Mandiri':
-      return role!='admin'&&!guest
-        ?const JumantikMandiri2605()
-        :const Center(child:Text('Menu ini khusus akun selain Super Admin.'));
+      return !guest&&CikokoJumantikMandiri2607.eligible(role)
+        ?JumantikMandiriWarga2607(api:api)
+        :const Center(child:Text('Jumantik Mandiri untuk akun selain Admin.'));
     case 'Berita Jumantik Cikoko':
       return const JumantikNews2605();
+    case 'Berita Jumantik Mandiri Warga':
+      return const JumantikMandiriNews2607();
+    case 'Verifikasi Jumantik Mandiri':
+      return role=='admin'
+        ?JumantikMandiriAdmin2607(api:api)
+        :const Center(child:Text('Verifikasi hanya untuk Super Admin.'));
     case 'Verifikasi Jumantik':
       return role=='admin'
         ?CikokoJumantikReview2606(api:api)
@@ -929,7 +936,23 @@ class _HomeState extends State<HomePage> {
     if(category=='surat'||category=='progres_surat'||category=='laporan_masuk'){
       switchTo(isStaff?'Verifikasi Laporan':'Riwayat');return;
     }
-    if(category=='berita'||category=='pengumuman'){
+    if(category=='jumantik_mandiri_terbaru'||category=='jumantik_rt_rw_terbaru'){
+       switchTo(category=='jumantik_mandiri_terbaru'
+         ?'Berita Jumantik Mandiri Warga':'Berita Jumantik Cikoko');return;
+     }
+     if(category=='jumantik_mandiri_review'){
+       switchTo(role=='admin'?'Verifikasi Jumantik Mandiri':'Jumantik Mandiri');return;
+     }
+     if(category=='jumantik_mandiri_status'){
+       switchTo('Jumantik Mandiri');return;
+     }
+     if(category=='jumantik_rt_rw_review'){
+       switchTo(role=='admin'?'Verifikasi Jumantik':'Laporan Jumantik RT/RW');return;
+     }
+     if(category=='jumantik_rt_rw_status'){
+       switchTo('Laporan Jumantik RT/RW');return;
+     }
+     if(category=='berita'||category=='pengumuman'){
       await refreshPublishedContent();
       if(mounted)switchTo('Berita & Kegiatan');
       return;
