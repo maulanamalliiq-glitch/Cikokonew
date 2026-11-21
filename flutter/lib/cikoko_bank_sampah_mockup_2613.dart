@@ -434,8 +434,11 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
                 child:Row(children:[
                   _tableCell(
                     GestureDetector(
-                      onLongPress:entries[i].id==null&&editable?()=>{
-                        setState((){final r=rows.removeAt(i);r.dispose();})
+                      onLongPress:entries[i].id==null&&editable?(){
+                        setState((){
+                          final removed=rows.removeAt(i);
+                          removed.dispose();
+                        });
                       }:null,
                       child:Container(
                         padding:const EdgeInsets.symmetric(vertical:12),
