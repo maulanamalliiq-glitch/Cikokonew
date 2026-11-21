@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import 'api.dart';
 import 'cikoko_bank_sampah_mockup_2613.dart';
+import 'cikoko_bank_sampah_personal_2618.dart';
 
 /// Bank Sampah Cikoko: project-specific module, isolated from attendance,
 /// PJLP leave, PPPK performance and Jumantik reporting.
@@ -148,6 +149,8 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
   Map<String, dynamic> annual = {};
   Map<String, dynamic> members = {};
   Map<String, dynamic> summary = {};
+  Map<String, dynamic> personalEntries = {};
+  String personalEntriesError = '';
   Map<String, dynamic> selectedSession = {};
   Map<String, dynamic> archive2026 = {};
   int? sessionId;
@@ -181,6 +184,8 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
       Map<String, dynamic> annualData = {};
       Map<String, dynamic> membersData = {};
       Map<String, dynamic> myData = {};
+      Map<String, dynamic> personalData = {};
+      String myDetailsError = '';
       Map<String, dynamic> sessionData = {};
       Map<String, dynamic> archiveData = {};
       int? nextSession = sessionId;
@@ -212,13 +217,25 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
           sessionData = await CikokoBankSampahApi2610.call(widget.api,
               'session_entries', query: {'session_id': nextSession.toString()});
         }
-      } else {
-        myData = await CikokoBankSampahApi2610.call(widget.api,
-            'summary', query: {'year': year.toString()});
+      }
+      final memberRole=(widget.api.profile?['role']??'').toString();
+      if(memberRole=='pjlp'||memberRole=='pppk'){
+        myData=await CikokoBankSampahApi2610.call(widget.api,'summary',
+          query:{'year':year.toString()});
+        try {
+          personalData=await CikokoBankSampahApi2610.call(
+            widget.api,'personal_entries',query:{'year':year.toString()});
+        } catch (e) {
+          // Keep the annual totals visible if an older server lacks details.
+          myDetailsError='Rincian barang belum dapat dimuat. Periksa '
+            'pembaruan API Bank Sampah di cPanel, lalu refresh halaman.';
+        }
       }
       if (mounted) setState(() {
         permissions = access; dashboard = dash; annual = annualData;
-        members = membersData; summary = myData; selectedSession = sessionData;
+        members = membersData; summary = myData;
+        personalEntries = personalData; personalEntriesError = myDetailsError;
+        selectedSession = sessionData;
         archive2026 = archiveData;
         sessionId = nextSession; loading = false;
       });
@@ -279,11 +296,22 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
   Widget mySummary() => Column(crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       totalsCard(summary, 'Hasil Bank Sampah Saya · ' + year.toString()),
-      const Card(child: Padding(
-        padding: EdgeInsets.all(14),
-        child: Text('Penimbangan dicatat oleh petugas PJLP atau PPPK yang ditunjuk Admin. '
-          'Rekap nama barang dan laporan lengkap dapat dilihat oleh ASN dan Admin.'),
-      )),
+      if(personalEntries.isNotEmpty)
+        BankSampahPersonalDetails2618(
+          key:ValueKey('bank_personal_'+year.toString()),
+          year:year,data:personalEntries)
+      else if(personalEntriesError.isNotEmpty)
+        Card(child:Padding(padding:const EdgeInsets.all(13),
+          child:Row(children:[
+            const Icon(Icons.info_outline,color:Colors.deepOrange),
+            const SizedBox(width:9),
+            Expanded(child:Text(personalEntriesError,
+              style:const TextStyle(fontSize:12,color:Colors.blueGrey))),
+          ])))
+      else
+        const Card(child:Padding(padding:EdgeInsets.all(13),
+          child:Text('Rincian penimbangan belum tersedia.',
+            style:TextStyle(color:Colors.blueGrey)))),
     ],
   );
 
@@ -761,7 +789,7 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
           subtitle: Text(error),
           trailing: IconButton(onPressed: refresh, icon: const Icon(Icons.refresh)))),
         if (!loading && error.isEmpty) ...[
-          if (!canSeeAll) mySummary(),
+          if (role=='pjlp'||role=='pppk') mySummary(),
           if (canSeeAll) ...[
             if (canInput) const Card(child: Padding(padding: EdgeInsets.all(12),
               child: Text('Petugas PJLP/PPPK: isikan jenis barang dan hasil timbang. '
