@@ -210,9 +210,9 @@ function ckbs_archive_report_name(string $source):string {
     return $known[$source]??$source;
 }
 
-// Personal totals should use confirmed historical rows ONLY when the
-// Excel identity maps uniquely to the exact named PJLP/PPPK account.
-// Abbreviated, duplicate, or external names require explicit Admin review.
+// Personal totals may use unique full account names or ONLY the short-name
+// aliases explicitly confirmed by the owner. Other display-name guesses
+// DO NOT grant balances to an account; Admin must verify them manually.
 function ckbs_archive_normalize_name(string $name):string {
     $name=(string)preg_replace('/\\s+/u',' ',trim($name));
     return function_exists('mb_strtolower')?mb_strtolower($name,'UTF-8'):strtolower($name);
@@ -239,9 +239,20 @@ function ckbs_archive_identity_map(PDO $db,array $users):array {
     return ['exact'=>$unique,'manual'=>$manual];
 }
 function ckbs_archive_match_account(string $sourceName,array $identity):?string {
+    // Explicitly confirmed by owner, 21 November 2026:
+    // 'Subhan' in the 2026 Excel means 'Aan Subhan';
+    // 'Agus K' in the 2026 Excel means 'Agus Kurniawan'.
+    // A matching UNIQUE full PJLP/PPPK user account is still required.
+    // An Admin-verified mapping overrides the names below.
     if(isset($identity['manual'][$sourceName]))
         return (string)$identity['manual'][$sourceName];
-    $id=$identity['exact'][ckbs_archive_normalize_name($sourceName)]??null;
+    $key=ckbs_archive_normalize_name($sourceName);
+    $verifiedAliases=[
+        'subhan'=>'aan subhan',
+        'agus k'=>'agus kurniawan',
+    ];
+    $key=$verifiedAliases[$key]??$key;
+    $id=$identity['exact'][$key]??null;
     return is_string($id)&&$id!==''?$id:null;
 }
 function ckbs_archive_confirmed_rows(PDO $db):array {
