@@ -60,6 +60,16 @@ function cikoko_jumantik_date(string $date): bool {
     $today = (new DateTimeImmutable('now', new DateTimeZone('Asia/Jakarta')))->format('Y-m-d');
     return $date >= '2020-01-01' && $date <= $today;
 }
+/** Legacy website 2605 records must remain readable after the SQL upgrade. */
+function cikoko_jumantik_legacy_reports(): array {
+    try {
+        $rows=db_read('jumantik_reports');
+        return is_array($rows)?array_values(array_filter($rows,'is_array')):[];
+    }catch(Throwable $e){
+        error_log('[Cikoko Jumantik] JSON report read failed: '.$e->getMessage());
+        return [];
+    }
+}
 function cikoko_jumantik_publishable_photo(PDO $db, string $id): ?string {
     $q = $db->prepare('SELECT photo_name FROM mobile_jumantik_reports
         WHERE public_id=? AND published_at IS NOT NULL LIMIT 1');
@@ -85,7 +95,16 @@ if ($action === 'photo') {
     $id = (string)($_GET['id']??'');
     if (!preg_match('/^[a-f0-9]{32}$/D', $id)) mobile_error('Foto tidak ditemukan.',404);
     $filename = cikoko_jumantik_publishable_photo($db,$id);
-    if ($filename === null) mobile_error('Foto tidak ditemukan.',404);
+    if ($filename === null) {
+        foreach(cikoko_jumantik_legacy_reports() as $legacy){
+            if((string)($legacy['id']??'')!==$id || ($legacy['published']??false)!==true)continue;
+            $legacyName=(string)($legacy['photo']??'');
+            if(preg_match('/^jumantik-[a-f0-9]{40}\\.(jpg|png|webp)$/D',$legacyName))
+                $filename=$legacyName;
+            break;
+        }
+    }
+    if($filename===null)mobile_error('Foto belum diterbitkan atau tidak ditemukan.',404);
     $file = __DIR__.'/private/'.$filename;
     if (!is_file($file)) mobile_error('Foto tidak ditemukan.',404);
     $extension = strtolower(pathinfo($filename,PATHINFO_EXTENSION));
@@ -110,7 +129,22 @@ if ($action === 'news') {
             'photo_url'=>'/mobile-api/jumantik-2605.php?action=photo&id='.$id,
         ];
     }
-    mobile_json(['ok'=>true,'items'=>$items]);
+    // Published reports from the 2605 JSON store must remain visible too.
+    foreach(cikoko_jumantik_legacy_reports() as $legacy){
+        if(($legacy['published']??false)!==true)continue;
+        $id=(string)($legacy['id']??'');
+        if(!preg_match('/^[a-f0-9]{32}$/D',$id))continue;
+        $items[]=[
+            'id'=>$id,'tanggal'=>(string)($legacy['tanggal']??''),
+            'rt'=>(string)($legacy['rt']??''),'rw'=>(string)($legacy['rw']??''),
+            'minggu_ke'=>(int)($legacy['minggu_ke']??0),
+            'jentik'=>(string)($legacy['jentik']??''),
+            'tempat_umum_lainnya'=>(string)($legacy['tempat_umum_lainnya']??''),
+            'photo_url'=>'/mobile-api/jumantik-2605.php?action=photo&id='.$id,
+        ];
+    }
+    usort($items,static fn($a,$b)=>strcmp((string)$b['tanggal'],(string)$a['tanggal']));
+    mobile_json(['ok'=>true,'items'=>array_slice($items,0,100)]);
 }
 
 $actor = mobile_auth();
@@ -173,7 +207,18 @@ if ($action === 'me') {
             'status'=>(string)$row['status'],'published'=>$row['published_at']!==null,
         ];
     }
-    mobile_json(['ok'=>true,'profile'=>$profile,'items'=>$items]);
+    foreach(cikoko_jumantik_legacy_reports() as $legacy){
+        if((string)($legacy['user_id']??'')!==$uid)continue;
+        $published=($legacy['published']??false)===true;
+        $items[]=[
+            'id'=>(string)($legacy['id']??''),
+            'tanggal'=>(string)($legacy['tanggal']??''),
+            'jentik'=>(string)($legacy['jentik']??''),
+            'status'=>$published?'published':'pending','published'=>$published,
+        ];
+    }
+    usort($items,static fn($a,$b)=>strcmp((string)$b['tanggal'],(string)$a['tanggal']));
+    mobile_json(['ok'=>true,'profile'=>$profile,'items'=>array_slice($items,0,60)]);
 }
 
 if (trim($profile['rt'])==='' || trim($profile['rw'])==='' || trim($profile['coordinator'])==='') {
