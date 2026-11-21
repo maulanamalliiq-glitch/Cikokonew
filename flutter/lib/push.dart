@@ -17,6 +17,12 @@ String destinationForPushCategory(String category,{required bool isStaff}) {
   if(category=='rt_rw_surat'||category=='rt_rw_status')return isStaff?'Surat Wilayah':'Surat Pengantar RT/RW';
   if(category=='surat'||category=='progres_surat'||category=='laporan_masuk')return isStaff?'Verifikasi Laporan':'Riwayat';
   if(category=='berita'||category=='pengumuman')return 'Berita & Kegiatan';
+  if(category=='jumantik_mandiri_review')return 'Verifikasi Jumantik Mandiri';
+  if(category=='jumantik_mandiri_status')return 'Jumantik Mandiri';
+  if(category=='jumantik_mandiri_terbaru')return 'Berita Jumantik Mandiri Warga';
+  if(category=='jumantik_rt_rw_review')return 'Verifikasi Jumantik';
+  if(category=='jumantik_rt_rw_status')return 'Laporan Jumantik RT/RW';
+  if(category=='jumantik_rt_rw_terbaru')return 'Berita Jumantik Cikoko';
   if(category=='inovasi')return 'Inovasi';
   // Manual general notices remain in the bell inbox.
   return 'Notifikasi';
