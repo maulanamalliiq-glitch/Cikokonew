@@ -81,7 +81,7 @@ void main() {
         members:members,availableSessions:[session],onSelectSession:(_){},
         officerName:'Petugas Bank Sampah',
         canInput:false,canManage:false,
-        request:(_,_)async=>throw StateError('Read-only UI must not call server'),
+        request:(action,body)async=>throw StateError('Read-only UI must not call server'),
         reload:() async {},notify:(_){},
       ),
     ))));
