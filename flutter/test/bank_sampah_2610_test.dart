@@ -18,6 +18,13 @@ void main() {
     }), '324 Kg   |   Rp 231.000,-');
   });
 
+  test('Both PPPK and PJLP can access the officer report view after assignment', () {
+    expect(CikokoBankSampahApi2610.supportedRoles, contains('pppk'));
+    expect(CikokoBankSampahApi2610.supportedRoles, contains('pjlp'));
+    expect(CikokoBankSampahApi2610.url('session_submit').queryParameters['action'],
+      'session_submit');
+  });
+
   test('The Bank Sampah API is isolated from the existing main API', () {
     expect(CikokoBankSampahApi2610.url('summary').toString(),
       contains('bank_sampah_2610.php?action=summary'));
