@@ -55,10 +55,6 @@ if($action==='app_update_policy'){
 }
 require __DIR__.'/bootstrap.php';
 require __DIR__.'/permissions.php';
-if(in_array($action,['google_login','google_link'],true)){
-    require_once __DIR__.'/google_auth_2608.php';
-    cikoko_google_route($action,$method);
-}
 // Public website header image is sourced from the SAME five-photo slideshow
 // that the live website's index.php renders. The appearance.hero slot is a
 // backward-compatible fallback when no published slideshow exists.
