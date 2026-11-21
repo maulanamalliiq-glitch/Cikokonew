@@ -8,6 +8,7 @@ import 'cikoko_innovation_detail.dart';
 import 'cikoko_innovation_admin_editor.dart';
 import 'cikoko_v4_public_pages.dart';
 import 'cikoko_v6_showcase.dart';
+import 'cikoko_bank_sampah_2610.dart';
 
 const civicBlue=Color(0xff216bd7), civicNavy=Color(0xff12375d);
 const String cikokoPlayStoreUrl=''; // TODO: isi URL Play Store aplikasi Cikoko
@@ -262,6 +263,8 @@ class _CivicProfileState extends State<CivicProfilePage>{
          color:Colors.white,size:22)),
      ]),
     ])),
+   if(role=='pjlp'||role=='pppk') BankSampahProfileSummary2610(
+     api:widget.api,onOpen:()=>widget.onNavigate?.call('Bank Sampah Cikoko')),
    const SizedBox(height:18),
    if(!editing)...[
      const V6Section(title:'Pengaturan Akun'),
