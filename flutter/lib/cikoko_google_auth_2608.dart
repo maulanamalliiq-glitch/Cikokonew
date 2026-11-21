@@ -33,6 +33,35 @@ abstract final class CikokoGoogleAuth2608 {
   static bool userCancelled(Object error) =>
       error is GoogleSignInException &&
       error.code == GoogleSignInExceptionCode.canceled;
+
+  /// Keep Google ID tokens, credentials and plugin implementation details out
+  /// of UI messages. Android Credential Manager sometimes reports real OAuth
+  /// configuration failures as "canceled" after an account is selected.
+  /// Never silently drop that status on the login screen.
+  static String loginFailureMessage(Object error) {
+    if (error is GoogleSignInException) {
+      final desc=(error.description ?? '').toLowerCase();
+      if (error.code == GoogleSignInExceptionCode.canceled) {
+        if (desc.contains('reauth') || desc.contains('developer') ||
+            desc.contains('configuration')) {
+          return 'Google gagal mengautentikasi akun yang dipilih. '
+              'Admin perlu memeriksa SHA-1 Play App Signing, OAuth Android, '
+              'dan Web Client ID di Firebase.';
+        }
+        return 'Proses masuk Google terhenti. Jika Anda sudah memilih akun '
+            'dan tidak menekan Batal, periksa SHA-1 Play App Signing di '
+            'Firebase atau coba jaringan lain.';
+      }
+      if (error.code == GoogleSignInExceptionCode.clientConfigurationError ||
+          error.code == GoogleSignInExceptionCode.providerConfigurationError) {
+        return 'Konfigurasi Login Google Android tidak sesuai. '
+            'Admin perlu memeriksa package name, SHA-1, dan Web Client ID.';
+      }
+      return 'Masuk Google tidak berhasil (tahap Google Android). '
+          'Coba lagi atau hubungi Admin untuk memeriksa konfigurasi OAuth.';
+    }
+    return cikokoFormalMessage(error);
+  }
 }
 
 class CikokoLinkGoogle2608 extends StatefulWidget {
@@ -54,9 +83,10 @@ class _CikokoLinkGoogle2608State extends State<CikokoLinkGoogle2608> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Akun Google berhasil dihubungkan. Berikutnya bisa masuk dengan Google.')));
     } catch (e) {
-      if (!mounted || CikokoGoogleAuth2608.userCancelled(e)) return;
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Belum berhasil menghubungkan Google: ${cikokoFormalMessage(e)}')));
+        content: Text('Belum berhasil menghubungkan Google: '
+            '${CikokoGoogleAuth2608.loginFailureMessage(e)}')));
     } finally {
       if (mounted) setState(() => busy = false);
     }
