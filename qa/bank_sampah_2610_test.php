@@ -8,10 +8,11 @@ $base=dirname(__DIR__);
 $php=file_get_contents($base.'/cpanel/mobile-api/bank_sampah_2610.php');
 $sql=file_get_contents($base.'/cpanel/mobile-api/migrate_bank_sampah_2610.sql');
 $dart=file_get_contents($base.'/flutter/lib/cikoko_bank_sampah_2610.dart');
+$mockup=file_get_contents($base.'/flutter/lib/cikoko_bank_sampah_mockup_2613.dart');
 $catalog=file_get_contents($base.'/flutter/lib/role_catalog.dart');
 $main=file_get_contents($base.'/flutter/lib/main.dart');
 $profile=file_get_contents($base.'/flutter/lib/v211_features.dart');
-foreach([$php,$sql,$dart,$catalog,$main,$profile] as $src)
+foreach([$php,$sql,$dart,$mockup,$catalog,$main,$profile] as $src)
   bank_check(is_string($src) && strlen($src)>300,'File modul hilang.');
 
 foreach([
@@ -37,22 +38,27 @@ bank_check(str_contains($php,"'session_submit'")&&str_contains($php,'status="sub
   'Hasil timbang harus dapat dikirim petugas untuk pemeriksaan Admin.');
 bank_check(str_contains($php,"if($"."status!=='open')"),'Penimbangan tidak boleh dikirim dua kali.');
 bank_check(str_contains($php,"Maksimal lima petugas"),'Batas 5 PJLP + PPPK hilang.');
-bank_check(str_contains($dart,'Simpan Draft')&&str_contains($dart,'Simpan Penimbangan'),
+bank_check(str_contains($mockup,'Simpan Draft')&&str_contains($mockup,'Simpan Penimbangan'),
   'Tombol draft/final sesuai mockup hilang.');
-bank_check(str_contains($dart,"await act('session_submit'"),
+bank_check(str_contains($mockup,"widget.request('session_submit'"),
   'Form petugas harus mengirim penimbangan untuk disahkan Admin.');
 bank_check(str_contains($php,"status=\"submitted\""),
   'Draft harus beralih ke status menunggu pengesahan.');
-bank_check(str_contains($dart,'if(canManage)...['),
+bank_check(str_contains($mockup,'if(widget.canManage)...['),
   'Tombol pengesahan Admin hilang.');
 bank_check(str_contains($php,"$"."uid,$"."year.'-01-01'"),'Ringkasan profil harus dibatasi akun/tahun.');
 bank_check(str_contains($php,"$"."s!=='open'"),'Tidak boleh mengubah sesi yang ditutup.');
 bank_check(str_contains($php,"'annual_csv'") && str_contains($php,"'annual'"),'Rekap tahunan belum tersedia.');
-bank_check(str_contains($dart,'Input Bank Sampah') &&
-   str_contains($dart,'Data Penimbangan') &&
-   str_contains($dart,'Kelurahan Cikoko'),
+bank_check(str_contains($mockup,'Input Bank Sampah') &&
+   str_contains($mockup,'Data Penimbangan') &&
+   str_contains($mockup,'Kelurahan Cikoko'),
    'Judul dan kartu Data Penimbangan sesuai mockup harus tersedia.');
-bank_check(str_contains($dart,'HASIL TIMBANGAN')&&str_contains($dart,'JUMLAH'),'Kolom foto contoh hilang.');
+bank_check(str_contains($mockup,'Hasil Timbangan (Kg)')&&str_contains($mockup,'Jumlah (Rp)'),
+  'Kolom input timbangan dan rupiah sesuai foto harus tersedia.');
+bank_check(str_contains($dart,'CikokoBankSampahMockup2613('),
+  'Halaman Bank Sampah harus menggunakan form mockup baru, bukan tabel statis.');
+bank_check(str_contains($mockup,"widget.request('entry_save'"),
+  'Simpan Draft harus menyimpan setiap baris ke API.');
 bank_check(str_contains($profile,'BankSampahProfileSummary2610'),'Ringkasan di bawah foto profil hilang.');
 bank_check(str_contains($main,"case 'Bank Sampah Cikoko'"),'Halaman khusus Bank Sampah hilang.');
 foreach(["'admin'","'asn'","'lurah'","'pjlp'","'pppk'"] as $role)
