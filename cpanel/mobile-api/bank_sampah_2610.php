@@ -100,6 +100,13 @@ function ckbs_schema(PDO $db):void {
         CONSTRAINT fk_bank2026_session FOREIGN KEY(session_date)
            REFERENCES mobile_bank_sampah_archive_sessions_2026(session_date) ON DELETE RESTRICT
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4',
+      'CREATE TABLE IF NOT EXISTS mobile_bank_sampah_archive_member_links_2026 (
+        source_member_name VARCHAR(160) NOT NULL PRIMARY KEY,
+        user_id VARCHAR(80) NOT NULL,
+        verified_by VARCHAR(80) NOT NULL,
+        verified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_archive_member_id (user_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4',
     ];
     foreach($tables as $sql)$db->exec($sql);
     $db->exec('INSERT IGNORE INTO mobile_bank_sampah_config_2610
@@ -203,6 +210,57 @@ function ckbs_archive_report_name(string $source):string {
     return $known[$source]??$source;
 }
 
+// Personal totals should use confirmed historical rows ONLY when the
+// Excel identity maps uniquely to the exact named PJLP/PPPK account.
+// Abbreviated, duplicate, or external names require explicit Admin review.
+function ckbs_archive_normalize_name(string $name):string {
+    $name=(string)preg_replace('/\\s+/u',' ',trim($name));
+    return mb_strtolower($name,'UTF-8');
+}
+function ckbs_archive_identity_map(PDO $db,array $users):array {
+    $unique=[];
+    foreach($users as $u){
+        if(!in_array((string)$u['role'],CKBS_ROLE_MEMBER,true))continue;
+        $key=ckbs_archive_normalize_name((string)$u['name']);
+        if($key==='')continue;
+        if(array_key_exists($key,$unique))$unique[$key]=null;
+        else $unique[$key]=(string)$u['id'];
+    }
+    $manual=[];
+    $q=$db->query('SELECT source_member_name,user_id
+       FROM mobile_bank_sampah_archive_member_links_2026');
+    foreach($q->fetchAll(PDO::FETCH_ASSOC) as $row){
+        $id=(string)$row['user_id'];
+        if(isset($users[$id]) &&
+           in_array((string)$users[$id]['role'],CKBS_ROLE_MEMBER,true)){
+            $manual[(string)$row['source_member_name']]=$id;
+        }
+    }
+    return ['exact'=>$unique,'manual'=>$manual];
+}
+function ckbs_archive_match_account(string $sourceName,array $identity):?string {
+    if(isset($identity['manual'][$sourceName]))
+        return (string)$identity['manual'][$sourceName];
+    $id=$identity['exact'][ckbs_archive_normalize_name($sourceName)]??null;
+    return is_string($id)&&$id!==''?$id:null;
+}
+function ckbs_archive_confirmed_rows(PDO $db):array {
+    // If a date already contains a live entry, prefer the entire live session
+    // and suppress archived copies for that date to avoid double counting.
+    return $db->query('SELECT a.session_date,a.source_row,a.source_member_name,
+       a.item_name,a.weight_kg,a.amount_rp,a.source_sheet
+       FROM mobile_bank_sampah_archive_entries_2026 a
+       WHERE a.review_status="confirmed"
+         AND NOT EXISTS(
+           SELECT 1 FROM mobile_bank_sampah_sessions_2610 s
+           JOIN mobile_bank_sampah_entries_2610 e
+             ON e.session_id=s.id AND e.voided_at IS NULL
+           WHERE s.session_date=a.session_date
+         )
+       ORDER BY a.session_date DESC,a.source_row DESC LIMIT 6000')
+       ->fetchAll(PDO::FETCH_ASSOC);
+}
+
 function ckbs_entries(PDO $db,int $year,array $users,?int $sessionId=null):array {
     $sql='SELECT e.id,e.session_id,e.member_user_id,e.item_name,e.weight_kg,
        e.amount_rp,e.entered_by,e.updated_at,s.session_date,s.status AS session_status
@@ -230,24 +288,17 @@ function ckbs_entries(PDO $db,int $year,array $users,?int $sessionId=null):array
         // account status or already entered live sessions.
         // To prevent double counting, a date with ANY live weighed item
         // takes precedence over its archived copy in the annual totals.
-        $sqlArchive='SELECT a.session_date,a.source_row,a.source_member_name,
-             a.item_name,a.weight_kg,a.amount_rp,a.source_sheet
-          FROM mobile_bank_sampah_archive_entries_2026 a
-          WHERE a.review_status="confirmed"
-            AND NOT EXISTS(
-              SELECT 1 FROM mobile_bank_sampah_sessions_2610 s
-              JOIN mobile_bank_sampah_entries_2610 e
-                ON e.session_id=s.id AND e.voided_at IS NULL
-              WHERE s.session_date=a.session_date
-            )
-          ORDER BY a.session_date DESC,a.source_row DESC LIMIT 6000';
-        $historical=$db->query($sqlArchive)->fetchAll(PDO::FETCH_ASSOC);
+        $historical=ckbs_archive_confirmed_rows($db);
+        $identity=ckbs_archive_identity_map($db,$users);
         foreach($historical as $item){
             $sourceName=(string)$item['source_member_name'];
-            $reportName=ckbs_archive_report_name($sourceName);
+            $realId=ckbs_archive_match_account($sourceName,$identity);
+            $reportName=$realId!==null?
+              (string)$users[$realId]['name']:ckbs_archive_report_name($sourceName);
             $result[]=[
-              'id'=>0,'session_id'=>0,'member_user_id'=>'archive26_'.
-                substr(hash('sha256',strtolower($reportName)),0,20),
+              'id'=>0,'session_id'=>0,
+              'member_user_id'=>$realId??('archive26_'.
+                substr(hash('sha256',strtolower($reportName)),0,20)),
               'member_name'=>$reportName,'source_member_name'=>$sourceName,'item_name'=>(string)$item['item_name'],
               'weight_kg'=>(string)$item['weight_kg'],
               'amount_rp'=>(int)$item['amount_rp'],
@@ -325,7 +376,26 @@ if($action==='summary'){
      WHERE e.member_user_id=? AND e.voided_at IS NULL
        AND s.session_date>=? AND s.session_date<?');
     $st->execute([$uid,$year.'-01-01',($year+1).'-01-01']);
-    mobile_json(['ok'=>true,'year'=>$year,'totals'=>ckbs_totals($st->fetchAll(PDO::FETCH_ASSOC))]);
+    $rows=$st->fetchAll(PDO::FETCH_ASSOC);
+    $archivedCount=0;
+    if($year===2026){
+        $identity=ckbs_archive_identity_map($db,$users);
+        foreach(ckbs_archive_confirmed_rows($db) as $historical){
+            if(ckbs_archive_match_account(
+                 (string)$historical['source_member_name'],$identity)!==$uid)
+                continue;
+            $rows[]=[
+              'weight_kg'=>(string)$historical['weight_kg'],
+              'amount_rp'=>(int)$historical['amount_rp']
+            ];
+            $archivedCount++;
+        }
+    }
+    mobile_json(['ok'=>true,'year'=>$year,'totals'=>ckbs_totals($rows),
+       'archived_entries'=>$archivedCount,
+       'note'=>$year===2026?
+         'Arsip lama dihitung hanya jika nama cocok unik atau telah diverifikasi Admin.':
+         'Rekap penimbangan dari data sesi aplikasi.']);
 }
 if($action==='members'){
     if(!$full)mobile_error('Hanya petugas, ASN atau Admin dapat melihat daftar anggota.',403);
