@@ -5,6 +5,7 @@ import 'cikoko_home_sections.dart';
 import 'cikoko_home_extra.dart';
 import 'cikoko_reviews.dart';
 import 'cikoko_activity_updates_2614.dart';
+import 'bank_sampah_annual_home_2618.dart';
 
 /// Single design vocabulary based on the supplied Cikoko Smart V4 16-screen showcase.
 /// Keep server values and permissions as the source of truth: no demo reports or fake service data.
@@ -445,7 +446,9 @@ class V6Home extends StatelessWidget{
       onAll:()=>navigate('Berita & Kegiatan')),
     const SizedBox(height:12),
     V6AnnouncementTicker(items:items,onAll:()=>navigate('Pengumuman')),
-    // Status surat now appears immediately below Pengumuman & Agenda.
+    // Rekap tahunan Bank Sampah, tepat sebelum Status Pelayanan Surat.
+    const SizedBox(height:12),
+    const BankSampahAnnualHome2618(),
     const SizedBox(height:12),
     V6LetterStatusStrip(counts:letterCounts,onStatus:letterStatus),
     const SizedBox(height:14),
@@ -536,6 +539,8 @@ class V6AdminHome extends StatelessWidget {
          color:Colors.white,size:27)),
     ])),
    const SizedBox(height:17),
+   const BankSampahAnnualHome2618(),
+   const SizedBox(height:14),
    const V6Section(title:'Ringkasan Pelayanan'),
    GridView.count(crossAxisCount:2,childAspectRatio:1.82,
     shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),
