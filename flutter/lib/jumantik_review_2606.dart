@@ -74,19 +74,23 @@ class _CikokoJumantikReview2606State extends State<CikokoJumantikReview2606> {
             const Text('Verifikasi Jumantik RT/RW',
               style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            const Text('Periksa foto dan hasil pemeriksaan sebelum berita diterbitkan. '
+            const Text('Riwayat mencakup laporan menunggu verifikasi, sudah terbit, dan ditolak. '
               'Nama kepala keluarga dan alamat lengkap hanya untuk pemeriksaan internal.'),
             const SizedBox(height: 12),
             if (snapshot.data!.isEmpty) const Card(child: Padding(
-              padding: EdgeInsets.all(16), child: Text('Tidak ada laporan yang menunggu verifikasi.'))),
+              padding: EdgeInsets.all(16), child: Text('Belum ada riwayat laporan Jumantik.'))),
             for (final item in snapshot.data!) Builder(builder: (context) {
               final id = int.tryParse('${item['id'] ?? ''}') ?? 0;
+              final status = (item['status'] ?? 'pending').toString();
+              final needsReview = status == 'pending';
               final photo = Jumantik2605Api.url('admin_photo').replace(
                 queryParameters: {'action': 'admin_photo', 'id': '$id'});
               return Card(child: Padding(padding: const EdgeInsets.all(14),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('${item['tanggal'] ?? ''} • RT ${item['rt'] ?? ''} / RW ${item['rw'] ?? ''}',
                     style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text('Status: ${status == 'published' ? 'Sudah terbit' : status == 'rejected' ? 'Ditolak' : 'Menunggu verifikasi'}',
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
                   Text('Petugas: ${item['officer_name'] ?? ''}'),
                   Text('Koordinator: ${item['coordinator'] ?? ''}'),
                   Text('Lokasi: ${item['lokasi'] ?? ''}'),
@@ -100,7 +104,7 @@ class _CikokoJumantikReview2606State extends State<CikokoJumantikReview2606> {
                     errorBuilder: (_, __, ___) =>
                       const Text('Foto belum bisa dimuat. Jangan terbitkan sebelum melihat foto.')),
                   const SizedBox(height: 10),
-                  Wrap(spacing: 8, children: [
+                  if (needsReview) Wrap(spacing: 8, children: [
                     OutlinedButton(
                       onPressed: processing != null || id <= 0 ? null : () => decide(id, 'reject'),
                       child: const Text('Tolak')),
