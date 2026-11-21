@@ -167,7 +167,7 @@ class _JumantikRtRw2605State extends State<JumantikRtRw2605>{
         if(history.isEmpty)const Card(child:Padding(padding:EdgeInsets.all(14),child:Text('Belum ada laporan.'))),
         for(final item in history.whereType<Map>())Card(child:ListTile(
           title:Text((item['tanggal']??'').toString()+' · Jentik '+(item['jentik']??'').toString()),
-          subtitle:Text(item['published']==true?'Sudah diterbitkan':'Menunggu pemeriksaan'))),
+          subtitle:Text(item['status']=='rejected'?'Ditolak':item['published']==true?'Sudah diterbitkan':'Menunggu pemeriksaan'))),
       ]));
     });
   }
