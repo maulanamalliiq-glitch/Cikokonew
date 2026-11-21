@@ -353,6 +353,21 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Buat paket Bank Sampah 2610 aman untuk cPanel (hanya file baru)
+        run: |
+          set -euo pipefail
+          mkdir -p bank-sampah-2610-safe/mobile-api bank-sampah-2610-safe/sql
+          cp cpanel/mobile-api/bank_sampah_2610.php bank-sampah-2610-safe/mobile-api/
+          cp cpanel/mobile-api/migrate_bank_sampah_2610.sql bank-sampah-2610-safe/sql/
+          printf '%s\n' 'BANK SAMPAH CIKOKO 2610 - PATCH AMAN, HANYA FILE BARU' '1. Backup database dan seluruh mobile-api terlebih dahulu.' '2. Impor hanya sql/migrate_bank_sampah_2610.sql ke database lama; tidak perlu menghapus tabel.' '3. Ekstrak ZIP di public_html: file baru mobile-api/bank_sampah_2610.php akan ditambahkan.' '4. Jangan mengganti index.php, bootstrap.php, private/, roles-lib.php, portal_users, atau database PJLP/PPPK.' '5. Hanya Admin Utama yang menambah/menghapus anggota (nonaktif daftar, bukan menghapus akun) dan menunjuk maksimal 5 petugas PJLP.' '6. Admin membuat jadwal Minggu ke-2 dan ke-4 (2x per bulan), atau ubah jadwal menjadi 1x per 2 bulan.' '7. Petugas Bank Sampah PJLP mengisi nama barang, Kg, Rp. ASN dan Lurah baca penuh, PJLP/PPPK ringkasan di bawah foto Profil.' '8. Untuk menu native dibutuhkan APK/AAB build 2610 yang dipublikasikan melalui Play Store; server saja tidak dapat membuat halaman baru pada APK lama.' '9. Uji pada staging: role, daftar anggota, petugas, jadwal, 2.5 Kg, Rp, rekap 2026, notifikasi dan histori sebelum produksi.' '10. Jangan aktifkan update wajib sampai rilis baru tersedia di Play Store.' > bank-sampah-2610-safe/PETUNJUK-PASANG.txt
+      - name: Unggah ZIP cPanel Bank Sampah aman 2610
+        uses: actions/upload-artifact@v4
+        with:
+          name: CikokoSmart-2610-BankSampah-API-SAFE
+          path: bank-sampah-2610-safe/
+          if-no-files-found: error
+          retention-days: 30
+
   production-probe:
     name: Hardcheck endpoint publik server aktif (read-only)
     needs: verify
