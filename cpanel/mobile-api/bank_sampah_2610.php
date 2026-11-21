@@ -194,7 +194,7 @@ $methods=[
  'status'=>'GET','summary'=>'GET','dashboard'=>'GET','members'=>'GET','schedule'=>'GET',
  'session_entries'=>'GET','annual'=>'GET','annual_csv'=>'GET',
  'member_set'=>'POST','officer_set'=>'POST','config_set'=>'POST',
- 'session_create'=>'POST','session_status'=>'POST','entry_save'=>'POST','entry_void'=>'POST'
+ 'session_create'=>'POST','session_submit'=>'POST','session_status'=>'POST','entry_save'=>'POST','entry_void'=>'POST'
 ];
 if(!isset($methods[$action]))mobile_error('Layanan Bank Sampah tidak tersedia.',404);
 if($methods[$action]!==$method)mobile_error('Metode tidak diizinkan.',405);
@@ -311,7 +311,7 @@ if($action==='annual'||$action==='annual_csv'){
         'members'=>$members,'months'=>$months,'items'=>$rows]);
 }
 
-if(!$admin && !in_array($action,['entry_save'],true))
+if(!$admin && !in_array($action,['entry_save','session_submit'],true))
     mobile_error('Pengaturan Bank Sampah hanya untuk Admin Utama.',403);
 $b=mobile_body();
 if($action==='member_set'||$action==='officer_set'){
@@ -370,6 +370,36 @@ if($action==='session_create'){
     foreach($officers as $officer)mobile_emit('bank_sampah_tugas','Jadwal Bank Sampah Cikoko',
       'Penimbangan '.$date->format('d-m-Y').' sudah dibuat dan siap diisi.','personal',(string)$officer);
     mobile_json(['ok'=>true,'id'=>$id,'message'=>'Sesi penimbangan dibuat.']);
+}
+
+if($action==='session_submit'){
+    if(!ckbs_officer($db,$actor))
+        mobile_error('Hanya petugas PJLP/PPPK yang ditunjuk Admin dapat mengirim penimbangan.',403);
+    $id=ckbs_id($b['session_id']??null);
+    // Serialize with entry_save; no more edits after submission until Admin reopens.
+    $db->beginTransaction();
+    try{
+        $q=$db->prepare('SELECT status FROM mobile_bank_sampah_sessions_2610 WHERE id=? FOR UPDATE');
+        $q->execute([$id]);
+        $status=$q->fetchColumn();
+        if($status!=='open')mobile_error('Sesi sudah dikirim atau ditutup.',409);
+        $q=$db->prepare('SELECT COUNT(*) FROM mobile_bank_sampah_entries_2610
+         WHERE session_id=? AND voided_at IS NULL');
+        $q->execute([$id]);
+        if((int)$q->fetchColumn()<1)mobile_error('Tambahkan sekurangnya satu hasil timbang.',422);
+        $q=$db->prepare('UPDATE mobile_bank_sampah_sessions_2610
+         SET status="submitted",updated_by=? WHERE id=? AND status="open"');
+        $q->execute([$uid,$id]);
+        if($q->rowCount()!==1)mobile_error('Sesi sudah berubah. Muat ulang.',409);
+        $db->commit();
+    }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
+    mobile_emit('bank_sampah_review','Penimbangan Bank Sampah menunggu pemeriksaan',
+        'Hasil penimbangan #'.$id.' telah dikirim oleh petugas PJLP/PPPK untuk disahkan.',
+        'personal','admin');
+    mobile_emit('bank_sampah_tugas','Hasil timbang berhasil dikirim',
+        'Penimbangan #'.$id.' telah dikirim dan menunggu pengesahan Admin.',
+        'personal',$uid);
+    mobile_json(['ok'=>true,'message'=>'Penimbangan dikirim. Menunggu pengesahan Admin.']);
 }
 if($action==='session_status'){
     $id=ckbs_id($b['session_id']??null);
