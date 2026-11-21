@@ -390,6 +390,74 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
     if (result != null) await act('entry_save', result);
   }
 
+  /// The existing edit dialog writes each row straight to the server in
+  /// an open session. This button verifies/reloads the saved draft, without
+  /// publishing or closing the session.
+  Future<void> saveDraft() async {
+    final id=sessionId;
+    if(id==null){message('Pilih tanggal timbang terlebih dahulu.');return;}
+    try {
+      final result=await CikokoBankSampahApi2610.call(
+        widget.api,'session_entries',query:{'session_id':id.toString()});
+      if(!mounted)return;
+      setState(()=>selectedSession=result);
+      message('Draft sudah tersimpan di server (' +
+        records(result,'items').length.toString() + ' baris).');
+    }catch(e){
+      message('Belum dapat memeriksa draft: '+cikokoFormalMessage(e));
+    }
+  }
+
+  Future<void> submitWeighing() async {
+    final id=sessionId;
+    if(id==null){message('Pilih tanggal timbang dahulu.');return;}
+    final existing=records(selectedSession,'items');
+    if(existing.isEmpty){message('Tambahkan minimal satu baris timbangan.');return;}
+    final approved=await showDialog<bool>(context:context,builder:(dialog)=>
+      AlertDialog(
+        title:const Text('Kirim hasil penimbangan?'),
+        content:const Text('Setelah dikirim, petugas tidak dapat mengubah '
+          'draft sampai Super Admin membuka kembali sesi. '
+          'Hasil akan menunggu pemeriksaan dan pengesahan Admin.'),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(dialog,false),
+            child:const Text('Kembali')),
+          FilledButton(onPressed:()=>Navigator.pop(dialog,true),
+            child:const Text('Ya, Kirim Penimbangan')),
+        ],
+      ));
+    if(approved==true)await act('session_submit',{'session_id':id});
+  }
+
+  Widget weighingTotals(Map<String,dynamic> result){
+    final data=result['totals'] is Map
+      ? Map<String,dynamic>.from(result['totals'] as Map)
+      : <String,dynamic>{};
+    Widget metric(IconData icon,String label,String value)=>Expanded(
+      child:Container(
+        padding:const EdgeInsets.all(12),
+        decoration:BoxDecoration(
+          color:const Color(0xffeef8f0),
+          borderRadius:BorderRadius.circular(13)),
+        child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Icon(icon,color:const Color(0xff218541),size:24),
+          const SizedBox(height:4),
+          Text(label,style:const TextStyle(fontSize:11.2,color:Color(0xff335342))),
+          const SizedBox(height:3),
+          Text(value,style:const TextStyle(fontSize:16.5,
+            fontWeight:FontWeight.w800,color:Color(0xff153e69))),
+        ]),
+      ),
+    );
+    return Row(children:[
+      metric(Icons.scale_outlined,'Total Kg',
+        CikokoBankSampahApi2610.kilos(data['weight_kg'])+' Kg'),
+      const SizedBox(width:9),
+      metric(Icons.monetization_on_outlined,'Total Rupiah',
+        'Rp '+CikokoBankSampahApi2610.money(data['amount_rp'])),
+    ]);
+  }
+
   Widget sessionPanel() {
     final sessions = records(dashboard, 'sessions');
     final info = selectedSession['session'] is Map
@@ -399,10 +467,17 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
     final open = info['status'] == 'open';
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       const SizedBox(height: 8),
-      const Text('DAFTAR NAMA PENYERAHAN BANK SAMPAH',
-        textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
-      const Text('KELURAHAN CIKOKO',
-        textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
+      const Card(child:Padding(padding:EdgeInsets.all(13),
+        child:Row(children:[
+          Icon(Icons.recycling,color:Color(0xff168342),size:37),
+          SizedBox(width:12),
+          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,
+            children:[
+              Text('Input Bank Sampah',style:TextStyle(
+                fontSize:21,fontWeight:FontWeight.w900,color:Color(0xff123b6f))),
+              Text('Kelurahan Cikoko',style:TextStyle(color:Colors.blueGrey)),
+            ])),
+        ]))),
       const SizedBox(height: 10),
       if (canManage) Card(child: Padding(padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -444,19 +519,36 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
       ),
       const SizedBox(height: 8),
       if (info.isNotEmpty) ...[
-        Text('Hari: Minggu     Tanggal: ' +
-            CikokoBankSampahApi2610.dateLocal(info['session_date'].toString())),
-        Text('Status: ' + (open ? 'Penimbangan masih dibuka' : 'Rekap disahkan Admin')),
-        totalsCard(selectedSession, 'Hasil timbang pada tanggal ini'),
-        if (canInput && open)
-          FilledButton.icon(onPressed: () => editEntry(),
-            icon: const Icon(Icons.add_circle_outline), label: const Text('Isi Barang & Timbangan')),
-        if (canManage) OutlinedButton.icon(
-          onPressed: () => act('session_status',
-            {'session_id': info['id'], 'status': open ? 'closed' : 'open'}),
-          icon: Icon(open ? Icons.lock_outline : Icons.lock_open),
-          label: Text(open ? 'Tutup & Sahkan Penimbangan' : 'Buka Kembali untuk Koreksi')),
-        const SizedBox(height: 8),
+        Card(child:Padding(padding:const EdgeInsets.all(14),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            const Row(children:[
+              Icon(Icons.event_note_outlined,color:Color(0xff0b5597)),
+              SizedBox(width:8),
+              Text('Data Penimbangan',style:TextStyle(
+                fontSize:16,fontWeight:FontWeight.w800,color:Color(0xff153e69))),
+            ]),
+            const SizedBox(height:10),
+            const Text('Hari: Minggu'),
+            Text('Tanggal: '+CikokoBankSampahApi2610.dateLocal(
+              info['session_date'].toString())),
+            Text('Petugas: '+(canInput
+              ? (widget.api.profile?['name']??'Petugas Bank Sampah').toString()
+              : 'PJLP/PPPK yang ditunjuk Admin')),
+            Text('Status: '+(open?'Draft / dapat diedit':
+              info['status']=='submitted'
+              ?'Menunggu pengesahan Admin':'Disahkan Admin'),
+              style:const TextStyle(fontWeight:FontWeight.w700)),
+          ]))),
+        const SizedBox(height:8),
+        weighingTotals(selectedSession),
+        const SizedBox(height:12),
+        const Text('Daftar Penimbangan Bank Sampah',
+          style:TextStyle(fontSize:16,fontWeight:FontWeight.w800,
+            color:Color(0xff153e69))),
+        const Text('NO · NAMA ANGGOTA · NAMA BARANG · HASIL TIMBANGAN · JUMLAH',
+          style:TextStyle(fontSize:10,color:Colors.blueGrey)),
+        const SizedBox(height:8),
+
         if (entries.isEmpty) const Card(child: ListTile(title: Text('Belum ada hasil timbang.'))),
         if (entries.isNotEmpty) SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -464,11 +556,11 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
             columnSpacing: 16,
             headingRowColor: WidgetStateProperty.all(const Color(0xffe7f3ef)),
             columns: [
-              const DataColumn(label: Text('NO')),
-              const DataColumn(label: Text('NAMA')),
-              const DataColumn(label: Text('NAMA BARANG')),
-              const DataColumn(label: Text('HASIL TIMBANGAN')),
-              const DataColumn(label: Text('JUMLAH')),
+              const DataColumn(label:Text('NO')),
+              const DataColumn(label:Text('NAMA ANGGOTA')),
+              const DataColumn(label:Text('NAMA BARANG')),
+              const DataColumn(label:Text('HASIL TIMBANGAN (Kg)')),
+              const DataColumn(label:Text('JUMLAH (Rp)')),
               if (canInput && open) const DataColumn(label: Text('UBAH')),
             ],
             rows: [
@@ -487,6 +579,46 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
             ],
           ),
         ),
+        if(canInput&&open)...[
+          const SizedBox(height:14),
+          OutlinedButton.icon(
+            onPressed:()=>editEntry(),
+            icon:const Icon(Icons.add_outlined),
+            label:const Text('Tambah Baris')),
+          const SizedBox(height:8),
+          Row(children:[
+            Expanded(child:OutlinedButton.icon(
+              onPressed:saveDraft,
+              icon:const Icon(Icons.save_outlined),
+              label:const Text('Simpan Draft'))),
+            const SizedBox(width:8),
+            Expanded(child:FilledButton.icon(
+              onPressed:submitWeighing,
+              icon:const Icon(Icons.check_circle_outline),
+              label:const Text('Simpan Penimbangan'))),
+          ]),
+          const SizedBox(height:8),
+          const Text('Draft tersimpan setelah setiap baris ditambahkan. '
+            'Pengiriman hasil menunggu pengesahan Super Admin.',
+            style:TextStyle(fontSize:11,color:Colors.blueGrey)),
+        ],
+        if(info['status']=='submitted'&&canInput)
+          const Card(child:ListTile(
+            leading:Icon(Icons.hourglass_top_outlined),
+            title:Text('Menunggu pengesahan Super Admin'),
+            subtitle:Text('Perubahan hanya dapat dilakukan setelah Admin membuka kembali.'))),
+        if(canManage)...[
+          if(info['status']!='closed')FilledButton.icon(
+            onPressed:()=>act('session_status',
+              {'session_id':info['id'],'status':'closed'}),
+            icon:const Icon(Icons.verified_outlined),
+            label:const Text('Sahkan Penimbangan')),
+          if(!open)OutlinedButton.icon(
+            onPressed:()=>act('session_status',
+              {'session_id':info['id'],'status':'open'}),
+            icon:const Icon(Icons.lock_open_outlined),
+            label:const Text('Buka Kembali untuk Koreksi')),
+        ],
       ],
     ]);
   }
