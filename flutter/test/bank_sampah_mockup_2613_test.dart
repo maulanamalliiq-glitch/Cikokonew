@@ -41,6 +41,10 @@ void main() {
     expect(find.text('PETUGAS PPPK'),findsOneWidget);
     expect(find.text('0 Kg'),findsOneWidget);
     expect(find.text('Rp 0'),findsOneWidget);
+    // Nama semua PJLP/PPPK aktif tersedia otomatis, bukan diinput manual.
+    expect(find.text('AAN SUBHAN'),findsOneWidget);
+    expect(find.text('ABDUL ROHMAN'),findsOneWidget);
+    expect(find.byType(TextField),findsNWidgets(6));
     expect(find.byKey(const Key('bank_sampah_add_row_2613')),findsOneWidget);
     expect(find.byKey(const Key('bank_sampah_save_draft_2613')),findsOneWidget);
     expect(find.byKey(const Key('bank_sampah_submit_2613')),findsOneWidget);
@@ -48,8 +52,7 @@ void main() {
     await tester.ensureVisible(find.byKey(const Key('bank_sampah_add_row_2613')));
     await tester.tap(find.byKey(const Key('bank_sampah_add_row_2613')));
     await tester.pumpAndSettle();
-    expect(find.text('AAN SUBHAN'),findsOneWidget);
-    expect(find.byType(TextField),findsNWidgets(3));
+    expect(find.byType(TextField),findsNWidgets(9));
     await tester.enterText(find.byType(TextField).at(0),'Kardus');
     await tester.enterText(find.byType(TextField).at(1),'2.5');
     await tester.enterText(find.byType(TextField).at(2),'3000');
