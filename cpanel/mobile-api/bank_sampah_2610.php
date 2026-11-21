@@ -187,6 +187,22 @@ function ckbs_config(PDO $db):array {
     return $db->query('SELECT cadence,anchor_month FROM mobile_bank_sampah_config_2610 WHERE id=1')
       ->fetch(PDO::FETCH_ASSOC) ?: ['cadence'=>'twice_monthly','anchor_month'=>1];
 }
+function ckbs_archive_report_name(string $source):string {
+    // Full names confirmed in the SAME ordinal roster from later 2026 sheets.
+    // Keep the literal source_member_name unchanged in the audit archive.
+    // Do NOT use this matching to claim any live portal account.
+    static $known=[
+       'Subhan'=>'Aan Subhan','Somad'=>'Abdul Somad',
+       'Sauki'=>'Achmad Sauqie','Ady'=>'Ady Dwi Harjanto',
+       'Agus K'=>'Agus Kurniawan','Agus S'=>'Agus Santoso',
+       'Dalo'=>'Ami Dalo','Awal'=>'Awaludin',
+       'Baskara'=>'Baskara Nirwana','Dimas'=>'Dimas Ichsan Ashari',
+       'Edwin'=>'Edwin Dwi Effendi','Melly P'=>'Melly Puspitoningrum',
+       'Mellyda SD'=>'Mellyda Sari Daulay'
+    ];
+    return $known[$source]??$source;
+}
+
 function ckbs_entries(PDO $db,int $year,array $users,?int $sessionId=null):array {
     $sql='SELECT e.id,e.session_id,e.member_user_id,e.item_name,e.weight_kg,
        e.amount_rp,e.entered_by,e.updated_at,s.session_date,s.status AS session_status
@@ -228,10 +244,11 @@ function ckbs_entries(PDO $db,int $year,array $users,?int $sessionId=null):array
         $historical=$db->query($sqlArchive)->fetchAll(PDO::FETCH_ASSOC);
         foreach($historical as $item){
             $sourceName=(string)$item['source_member_name'];
+            $reportName=ckbs_archive_report_name($sourceName);
             $result[]=[
               'id'=>0,'session_id'=>0,'member_user_id'=>'archive26_'.
-                substr(hash('sha256',strtolower($sourceName)),0,20),
-              'member_name'=>$sourceName,'item_name'=>(string)$item['item_name'],
+                substr(hash('sha256',strtolower($reportName)),0,20),
+              'member_name'=>$reportName,'source_member_name'=>$sourceName,'item_name'=>(string)$item['item_name'],
               'weight_kg'=>(string)$item['weight_kg'],
               'amount_rp'=>(int)$item['amount_rp'],
               'session_date'=>(string)$item['session_date'],
