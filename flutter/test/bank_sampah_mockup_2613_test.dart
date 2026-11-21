@@ -22,6 +22,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(home:Scaffold(body:
       SingleChildScrollView(child:CikokoBankSampahMockup2613(
         session:session,entries:const [],members:members,
+        availableSessions:[session],onSelectSession:(_){},
         officerName:'PETUGAS PPPK',canInput:true,canManage:false,
         request:(action,body) async {
           requests.add({'action':action,...body});
@@ -77,7 +78,8 @@ void main() {
           'id':1,'member_user_id':'pppk-2','member_name':'ABDUL ROHMAN',
           'item_name':'Kertas','weight_kg':'4.000','amount_rp':12000
         }],
-        members:members,officerName:'Petugas Bank Sampah',
+        members:members,availableSessions:[session],onSelectSession:(_){},
+        officerName:'Petugas Bank Sampah',
         canInput:false,canManage:false,
         request:(_,_)async=>throw StateError('Read-only UI must not call server'),
         reload:() async {},notify:(_){},
