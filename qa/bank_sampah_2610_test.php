@@ -37,6 +37,14 @@ bank_check(str_contains($php,"'session_submit'")&&str_contains($php,'status="sub
   'Hasil timbang harus dapat dikirim petugas untuk pemeriksaan Admin.');
 bank_check(str_contains($php,"if($"."status!=='open')"),'Penimbangan tidak boleh dikirim dua kali.');
 bank_check(str_contains($php,"Maksimal lima petugas"),'Batas 5 PJLP + PPPK hilang.');
+bank_check(str_contains($dart,'Simpan Draft')&&str_contains($dart,'Simpan Penimbangan'),
+  'Tombol draft/final sesuai mockup hilang.');
+bank_check(str_contains($dart,"await act('session_submit'"),
+  'Form petugas harus mengirim penimbangan untuk disahkan Admin.');
+bank_check(str_contains($php,"status=\"submitted\""),
+  'Draft harus beralih ke status menunggu pengesahan.');
+bank_check(str_contains($dart,'if(canManage)...['),
+  'Tombol pengesahan Admin hilang.');
 bank_check(str_contains($php,"$"."uid,$"."year.'-01-01'"),'Ringkasan profil harus dibatasi akun/tahun.');
 bank_check(str_contains($php,"$"."s!=='open'"),'Tidak boleh mengubah sesi yang ditutup.');
 bank_check(str_contains($php,"'annual_csv'") && str_contains($php,"'annual'"),'Rekap tahunan belum tersedia.');
