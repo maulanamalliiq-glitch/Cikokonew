@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import 'api.dart';
+import 'cikoko_bank_sampah_mockup_2613.dart';
 
 /// Bank Sampah Cikoko: project-specific module, isolated from attendance,
 /// PJLP leave, PPPK performance and Jumantik reporting.
@@ -459,167 +460,93 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
   }
 
   Widget sessionPanel() {
-    final sessions = records(dashboard, 'sessions');
-    final info = selectedSession['session'] is Map
-        ? Map<String, dynamic>.from(selectedSession['session'] as Map)
-        : <String, dynamic>{};
-    final entries = records(selectedSession, 'items');
-    final open = info['status'] == 'open';
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const SizedBox(height: 8),
-      const Card(child:Padding(padding:EdgeInsets.all(13),
-        child:Row(children:[
-          Icon(Icons.recycling,color:Color(0xff168342),size:37),
-          SizedBox(width:12),
-          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,
-            children:[
-              Text('Input Bank Sampah',style:TextStyle(
-                fontSize:21,fontWeight:FontWeight.w900,color:Color(0xff123b6f))),
-              Text('Kelurahan Cikoko',style:TextStyle(color:Colors.blueGrey)),
-            ])),
-        ]))),
-      const SizedBox(height: 10),
-      if (canManage) Card(child: Padding(padding: const EdgeInsets.all(12),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Text('Pengaturan jadwal', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text('Jadwal awal: Minggu ke-2 dan ke-4. Admin dapat memilih tanggal Minggu lain.'),
-          DropdownButtonFormField<String>(
-            initialValue: (dashboard['cadence'] ?? 'twice_monthly').toString(),
-            decoration: const InputDecoration(labelText: 'Pola penimbangan'),
-            items: const [
-              DropdownMenuItem(value: 'twice_monthly', child: Text('2 kali setiap bulan')),
-              DropdownMenuItem(value: 'every_two_months', child: Text('1 kali setiap 2 bulan')),
-            ],
-            onChanged: (v) { if (v != null) setCadence(v); },
-          ),
-          const SizedBox(height: 8),
-          FilledButton.icon(onPressed: createSession,
-            icon: const Icon(Icons.event_available_outlined),
-            label: const Text('Buat jadwal penimbangan (Minggu)')),
-        ]))),
-      if (sessions.isEmpty) const Card(child: ListTile(
-        title: Text('Belum ada sesi timbang di tahun ini.'),
-        subtitle: Text('Admin membuat jadwal sebelum petugas mengisi hasil timbangan.'))),
-      if (sessions.isNotEmpty) DropdownButtonFormField<int>(
-        key: ValueKey('bank_session_' + (sessionId ?? 0).toString()),
-        initialValue: sessionId,
-        isExpanded: true,
-        decoration: const InputDecoration(labelText: 'Pilih Tanggal Timbang',
-          border: OutlineInputBorder()),
-        items: [
-          for (final s in sessions)
-            DropdownMenuItem(
-              value: int.tryParse(s['id'].toString()) ?? 0,
-              child: Text(CikokoBankSampahApi2610.dateLocal(s['session_date'].toString()) +
-                  (s['status'] == 'closed' ? ' · Selesai' : ' · Terbuka')),
-            ),
-        ],
-        onChanged: (v) { if (v != null) changeSession(v); },
-      ),
-      const SizedBox(height: 8),
-      if (info.isNotEmpty) ...[
-        Card(child:Padding(padding:const EdgeInsets.all(14),
-          child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-            const Row(children:[
-              Icon(Icons.event_note_outlined,color:Color(0xff0b5597)),
-              SizedBox(width:8),
-              Text('Data Penimbangan',style:TextStyle(
-                fontSize:16,fontWeight:FontWeight.w800,color:Color(0xff153e69))),
+    final sessions=records(dashboard,'sessions');
+    final session=selectedSession['session'] is Map
+        ?Map<String,dynamic>.from(selectedSession['session'] as Map)
+        :<String,dynamic>{};
+    final entries=records(selectedSession,'items');
+    final users=records(members,'items');
+    return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      if(canManage)
+        Card(
+          margin:const EdgeInsets.only(bottom:12),
+          child:Padding(padding:const EdgeInsets.all(13),child:
+            Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+              const Row(children:[
+                Icon(Icons.settings_suggest_outlined,color:Color(0xff12548b)),
+                SizedBox(width:8),
+                Text('Pengaturan Jadwal Penimbangan',
+                  style:TextStyle(fontSize:13.5,fontWeight:FontWeight.w800)),
+              ]),
+              const SizedBox(height:6),
+              const Text('Jadwal awal Minggu ke-2 dan ke-4. '
+                'Admin dapat memilih pola kegiatan.',
+                style:TextStyle(fontSize:11,color:Colors.blueGrey)),
+              const SizedBox(height:9),
+              DropdownButtonFormField<String>(
+                key:ValueKey('bank_cadence_'+
+                    (dashboard['cadence']??'twice_monthly').toString()),
+                initialValue:(dashboard['cadence']??'twice_monthly').toString(),
+                isExpanded:true,
+                decoration:const InputDecoration(
+                  labelText:'Pola Penimbangan',border:OutlineInputBorder()),
+                items:const [
+                  DropdownMenuItem(value:'twice_monthly',
+                    child:Text('Minggu ke-2 dan ke-4 (2x sebulan)')),
+                  DropdownMenuItem(value:'every_two_months',
+                    child:Text('Sekali setiap 2 bulan')),
+                ],
+                onChanged:(v){if(v!=null)setCadence(v);},
+              ),
+              const SizedBox(height:9),
+              OutlinedButton.icon(onPressed:createSession,
+                icon:const Icon(Icons.calendar_month_outlined),
+                label:const Text('Buat Tanggal Penimbangan')),
             ]),
-            const SizedBox(height:10),
-            const Text('Hari: Minggu'),
-            Text('Tanggal: '+CikokoBankSampahApi2610.dateLocal(
-              info['session_date'].toString())),
-            Text('Petugas: '+(canInput
-              ? (widget.api.profile?['name']??'Petugas Bank Sampah').toString()
-              : 'PJLP/PPPK yang ditunjuk Admin')),
-            Text('Status: '+(open?'Draft / dapat diedit':
-              info['status']=='submitted'
-              ?'Menunggu pengesahan Admin':'Disahkan Admin'),
-              style:const TextStyle(fontWeight:FontWeight.w700)),
-          ]))),
-        const SizedBox(height:8),
-        weighingTotals(selectedSession),
-        const SizedBox(height:12),
-        const Text('Daftar Penimbangan Bank Sampah',
-          style:TextStyle(fontSize:16,fontWeight:FontWeight.w800,
-            color:Color(0xff153e69))),
-        const Text('NO · NAMA ANGGOTA · NAMA BARANG · HASIL TIMBANGAN · JUMLAH',
-          style:TextStyle(fontSize:10,color:Colors.blueGrey)),
-        const SizedBox(height:8),
-
-        if (entries.isEmpty) const Card(child: ListTile(title: Text('Belum ada hasil timbang.'))),
-        if (entries.isNotEmpty) SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columnSpacing: 16,
-            headingRowColor: WidgetStateProperty.all(const Color(0xffe7f3ef)),
-            columns: [
-              const DataColumn(label:Text('NO')),
-              const DataColumn(label:Text('NAMA ANGGOTA')),
-              const DataColumn(label:Text('NAMA BARANG')),
-              const DataColumn(label:Text('HASIL TIMBANGAN (Kg)')),
-              const DataColumn(label:Text('JUMLAH (Rp)')),
-              if (canInput && open) const DataColumn(label: Text('UBAH')),
-            ],
-            rows: [
-              for (var i = 0; i < entries.length; i++)
-                DataRow(cells: [
-                  DataCell(Text((i + 1).toString())),
-                  DataCell(SizedBox(width: 124,
-                    child: Text(entries[i]['member_name'].toString()))),
-                  DataCell(Text(entries[i]['item_name'].toString())),
-                  DataCell(Text(CikokoBankSampahApi2610.kilos(entries[i]['weight_kg']) + ' Kg')),
-                  DataCell(Text('Rp ' + CikokoBankSampahApi2610.money(entries[i]['amount_rp']))),
-                  if (canInput && open) DataCell(IconButton(
-                    onPressed: () => editEntry(entries[i]),
-                    icon: const Icon(Icons.edit_outlined), tooltip: 'Koreksi data')),
-                ]),
-            ],
           ),
         ),
-        if(canInput&&open)...[
-          const SizedBox(height:14),
-          OutlinedButton.icon(
-            onPressed:()=>editEntry(),
-            icon:const Icon(Icons.add_outlined),
-            label:const Text('Tambah Baris')),
-          const SizedBox(height:8),
-          Row(children:[
-            Expanded(child:OutlinedButton.icon(
-              onPressed:saveDraft,
-              icon:const Icon(Icons.save_outlined),
-              label:const Text('Simpan Draft'))),
-            const SizedBox(width:8),
-            Expanded(child:FilledButton.icon(
-              onPressed:submitWeighing,
-              icon:const Icon(Icons.check_circle_outline),
-              label:const Text('Simpan Penimbangan'))),
-          ]),
-          const SizedBox(height:8),
-          const Text('Draft tersimpan setelah setiap baris ditambahkan. '
-            'Pengiriman hasil menunggu pengesahan Super Admin.',
-            style:TextStyle(fontSize:11,color:Colors.blueGrey)),
-        ],
-        if(info['status']=='submitted'&&canInput)
-          const Card(child:ListTile(
-            leading:Icon(Icons.hourglass_top_outlined),
-            title:Text('Menunggu pengesahan Super Admin'),
-            subtitle:Text('Perubahan hanya dapat dilakukan setelah Admin membuka kembali.'))),
-        if(canManage)...[
-          if(info['status']!='closed')FilledButton.icon(
-            onPressed:()=>act('session_status',
-              {'session_id':info['id'],'status':'closed'}),
-            icon:const Icon(Icons.verified_outlined),
-            label:const Text('Sahkan Penimbangan')),
-          if(!open)OutlinedButton.icon(
-            onPressed:()=>act('session_status',
-              {'session_id':info['id'],'status':'open'}),
-            icon:const Icon(Icons.lock_open_outlined),
-            label:const Text('Buka Kembali untuk Koreksi')),
-        ],
-      ],
+      if(sessions.isEmpty)
+        const Card(child:ListTile(
+          leading:Icon(Icons.event_busy_outlined),
+          title:Text('Belum ada sesi penimbangan'),
+          subtitle:Text('Super Admin membuat tanggal sebelum petugas mengisi data.'))),
+      if(sessions.isNotEmpty)
+        Padding(padding:const EdgeInsets.only(bottom:12),
+          child:DropdownButtonFormField<int>(
+            key:ValueKey('bank_date_'+(sessionId??0).toString()),
+            initialValue:sessionId,
+            isExpanded:true,
+            decoration:const InputDecoration(
+              prefixIcon:Icon(Icons.calendar_today_outlined),
+              labelText:'Pilih tanggal timbang',
+              border:OutlineInputBorder()),
+            items:[
+              for(final s in sessions)
+                DropdownMenuItem<int>(
+                  value:int.tryParse(s['id'].toString())??0,
+                  child:Text(CikokoBankSampahApi2610.dateLocal(
+                    s['session_date'].toString())+
+                    (s['status']=='closed'?' · Disahkan':
+                     s['status']=='submitted'?' · Menunggu Admin':' · Draft')),
+                ),
+            ],
+            onChanged:(v){if(v!=null)changeSession(v);},
+          ),
+        ),
+      if(session.isNotEmpty)
+        CikokoBankSampahMockup2613(
+          key:ValueKey('bank_form_mockup_2613_'+(sessionId??0).toString()),
+          session:session,
+          entries:entries,
+          members:users,
+          officerName:(widget.api.profile?['name']??'Petugas Bank Sampah').toString(),
+          canInput:canInput,
+          canManage:canManage,
+          request:(action,body)=>CikokoBankSampahApi2610.call(
+            widget.api,action,body:body),
+          reload:refresh,
+          notify:message,
+        ),
     ]);
   }
 
