@@ -26,7 +26,7 @@ bank2616(str_contains($api,"'archive_2026'=>'GET'"),
 bank2616(str_contains($api,"'session_create'],true)") &&
          str_contains($api,'if(!ckbs_officer($db,$actor))'),
          'Only appointed PJLP/PPPK and Admin may choose dates');
-bank2616(!str_contains($api,"if($date->format('w')!=='0')"),
+bank2616(!str_contains($api,"if($"."date->format('w')!=='0')"),
          'Officer dates must not be Sunday-only');
 bank2616(str_contains($api,'$date<$today')&&
          str_contains($api,'$date>$max'),
