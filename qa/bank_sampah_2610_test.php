@@ -48,7 +48,10 @@ bank_check(str_contains($dart,'if(canManage)...['),
 bank_check(str_contains($php,"$"."uid,$"."year.'-01-01'"),'Ringkasan profil harus dibatasi akun/tahun.');
 bank_check(str_contains($php,"$"."s!=='open'"),'Tidak boleh mengubah sesi yang ditutup.');
 bank_check(str_contains($php,"'annual_csv'") && str_contains($php,"'annual'"),'Rekap tahunan belum tersedia.');
-bank_check(str_contains($dart,'DAFTAR NAMA PENYERAHAN BANK SAMPAH'),'Judul surat contoh hilang.');
+bank_check(str_contains($dart,'Input Bank Sampah') &&
+   str_contains($dart,'Data Penimbangan') &&
+   str_contains($dart,'Kelurahan Cikoko'),
+   'Judul dan kartu Data Penimbangan sesuai mockup harus tersedia.');
 bank_check(str_contains($dart,'HASIL TIMBANGAN')&&str_contains($dart,'JUMLAH'),'Kolom foto contoh hilang.');
 bank_check(str_contains($profile,'BankSampahProfileSummary2610'),'Ringkasan di bawah foto profil hilang.');
 bank_check(str_contains($main,"case 'Bank Sampah Cikoko'"),'Halaman khusus Bank Sampah hilang.');
