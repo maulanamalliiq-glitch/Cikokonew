@@ -74,6 +74,32 @@ function ckbs_schema(PDO $db):void {
         CONSTRAINT fk_bank2610_session FOREIGN KEY (session_id)
           REFERENCES mobile_bank_sampah_sessions_2610(id) ON DELETE RESTRICT
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4',
+      // Independent historical archive: never overwrite live 2610 sessions/entries.
+      'CREATE TABLE IF NOT EXISTS mobile_bank_sampah_archive_sessions_2026 (
+        session_date DATE NOT NULL PRIMARY KEY,
+        source_sheet VARCHAR(90) NOT NULL,
+        reported_weight_kg DECIMAL(12,3) NOT NULL,
+        reported_amount_rp BIGINT UNSIGNED NOT NULL,
+        source_label VARCHAR(120) NOT NULL DEFAULT "Bank Sampah Mandiri PPSU Kelurahan Cikoko.xlsx",
+        imported_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4',
+      'CREATE TABLE IF NOT EXISTS mobile_bank_sampah_archive_entries_2026 (
+        source_key CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+        session_date DATE NOT NULL,
+        source_sheet VARCHAR(90) NOT NULL,
+        source_row SMALLINT UNSIGNED NOT NULL,
+        source_member_name VARCHAR(160) NOT NULL,
+        item_name VARCHAR(140) NOT NULL,
+        unit_price_rp BIGINT UNSIGNED NOT NULL,
+        weight_kg DECIMAL(12,3) NOT NULL,
+        amount_rp BIGINT UNSIGNED NOT NULL,
+        review_status VARCHAR(16) NOT NULL DEFAULT "confirmed",
+        imported_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_bank2026_date (session_date,review_status),
+        INDEX idx_bank2026_name (source_member_name),
+        CONSTRAINT fk_bank2026_session FOREIGN KEY(session_date)
+           REFERENCES mobile_bank_sampah_archive_sessions_2026(session_date) ON DELETE RESTRICT
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4',
     ];
     foreach($tables as $sql)$db->exec($sql);
     $db->exec('INSERT IGNORE INTO mobile_bank_sampah_config_2610
@@ -174,13 +200,48 @@ function ckbs_entries(PDO $db,int $year,array $users,?int $sessionId=null):array
     $sql.=' ORDER BY s.session_date DESC,e.id DESC LIMIT 6000';
     $q=$db->prepare($sql);$q->execute($args);
     $rows=$q->fetchAll(PDO::FETCH_ASSOC);
-    return array_map(static function($r)use($users){
+    $result=array_map(static function($r)use($users){
         $r['id']=(int)$r['id'];$r['session_id']=(int)$r['session_id'];
         $r['weight_kg']=(string)$r['weight_kg'];
         $r['amount_rp']=(int)$r['amount_rp'];
         $r['member_name']=$users[(string)$r['member_user_id']]['name']??'Pegawai (akun tidak aktif)';
         return $r;
     },$rows);
+    if($sessionId===null && $year===2026){
+        // Source names in older Excel sheets cannot safely be mapped to
+        // live portal user IDs without explicit identity verification.
+        // Historical rows are annual read-only; never affect personal role,
+        // account status or already entered live sessions.
+        // To prevent double counting, a date with ANY live weighed item
+        // takes precedence over its archived copy in the annual totals.
+        $sqlArchive='SELECT a.session_date,a.source_row,a.source_member_name,
+             a.item_name,a.weight_kg,a.amount_rp,a.source_sheet
+          FROM mobile_bank_sampah_archive_entries_2026 a
+          WHERE a.review_status="confirmed"
+            AND NOT EXISTS(
+              SELECT 1 FROM mobile_bank_sampah_sessions_2610 s
+              JOIN mobile_bank_sampah_entries_2610 e
+                ON e.session_id=s.id AND e.voided_at IS NULL
+              WHERE s.session_date=a.session_date
+            )
+          ORDER BY a.session_date DESC,a.source_row DESC LIMIT 6000';
+        $historical=$db->query($sqlArchive)->fetchAll(PDO::FETCH_ASSOC);
+        foreach($historical as $item){
+            $sourceName=(string)$item['source_member_name'];
+            $result[]=[
+              'id'=>0,'session_id'=>0,'member_user_id'=>'archive26_'.
+                substr(hash('sha256',strtolower($sourceName)),0,20),
+              'member_name'=>$sourceName,'item_name'=>(string)$item['item_name'],
+              'weight_kg'=>(string)$item['weight_kg'],
+              'amount_rp'=>(int)$item['amount_rp'],
+              'session_date'=>(string)$item['session_date'],
+              'session_status'=>'closed','entered_by'=>'archive-2026',
+              'updated_at'=>null,'source_sheet'=>$item['source_sheet'],
+              'source_row'=>(int)$item['source_row'],'archive_2026'=>true
+            ];
+        }
+    }
+    return $result;
 }
 function ckbs_totals(array $rows):array {
     $grams=0;$rupiah=0;
@@ -192,7 +253,7 @@ function ckbs_totals(array $rows):array {
 $action=(string)($_GET['action']??'');
 $method=(string)($_SERVER['REQUEST_METHOD']??'GET');
 $methods=[
- 'public_activity'=>'GET','status'=>'GET','summary'=>'GET','dashboard'=>'GET','members'=>'GET','schedule'=>'GET',
+ 'public_activity'=>'GET','archive_2026'=>'GET','status'=>'GET','summary'=>'GET','dashboard'=>'GET','members'=>'GET','schedule'=>'GET',
  'session_entries'=>'GET','annual'=>'GET','annual_csv'=>'GET',
  'member_set'=>'POST','officer_set'=>'POST','config_set'=>'POST',
  'session_create'=>'POST','session_submit'=>'POST','session_status'=>'POST','entry_save'=>'POST','entry_void'=>'POST'
@@ -295,6 +356,17 @@ if($action==='session_entries'){
     $rows=ckbs_entries($db,(int)substr($s['session_date'],0,4),$users,$sessionId);
     mobile_json(['ok'=>true,'session'=>$s,'items'=>$rows,'totals'=>ckbs_totals($rows)]);
 }
+if($action==='archive_2026'){
+    if(!$full)mobile_error('Hanya petugas, ASN atau Admin dapat melihat arsip tahun 2026.',403);
+    $s=$db->query('SELECT session_date,source_sheet,reported_weight_kg,reported_amount_rp
+       FROM mobile_bank_sampah_archive_sessions_2026 ORDER BY session_date')->fetchAll(PDO::FETCH_ASSOC);
+    $q=$db->query('SELECT review_status,COUNT(*) AS total_rows,
+       COALESCE(SUM(weight_kg),0) AS weight_kg,
+       COALESCE(SUM(amount_rp),0) AS amount_rp
+       FROM mobile_bank_sampah_archive_entries_2026 GROUP BY review_status');
+    mobile_json(['ok'=>true,'year'=>2026,'sessions'=>$s,'status_summary'=>$q->fetchAll(PDO::FETCH_ASSOC),
+       'message'=>'Rincian perlu pemeriksaan tidak termasuk total resmi.']);
+}
 if($action==='annual'||$action==='annual_csv'){
     if(!$full)mobile_error('Hanya petugas, ASN atau Admin dapat membaca rekap tahunan.',403);
     $year=ckbs_year($_GET['year']??date('Y'));
@@ -339,7 +411,7 @@ if($action==='annual'||$action==='annual_csv'){
         'members'=>$members,'months'=>$months,'items'=>$rows]);
 }
 
-if(!$admin && !in_array($action,['entry_save','session_submit'],true))
+if(!$admin && !in_array($action,['entry_save','session_submit','session_create'],true))
     mobile_error('Pengaturan Bank Sampah hanya untuk Admin Utama.',403);
 $b=mobile_body();
 if($action==='member_set'||$action==='officer_set'){
@@ -383,16 +455,22 @@ if($action==='config_set'){
     mobile_json(['ok'=>true,'message'=>'Pola jadwal diperbarui. Jadwal yang sudah dibuat tetap tersimpan.']);
 }
 if($action==='session_create'){
+    // Petugas PJLP/PPPK yang ditunjuk dapat memilih tanggal berikutnya
+    // sendiri. Tidak wajib hari Minggu; pilihan harian sesuai kegiatan.
+    if(!ckbs_officer($db,$actor))
+        mobile_error('Hanya petugas Bank Sampah yang ditunjuk atau Admin dapat memilih tanggal.',403);
     $date=ckbs_valid_date(mobile_text($b['session_date']??'',10));
-    if($date->format('w')!=='0')mobile_error('Pilih tanggal hari Minggu untuk penimbangan.',422);
-    $year=(int)$date->format('Y');
-    if($year<(int)date('Y')-2||$year>(int)date('Y')+2)
+    $today=new DateTimeImmutable('today',new DateTimeZone('Asia/Jakarta'));
+    if(!$admin && $date<$today)
+        mobile_error('Petugas hanya dapat memilih tanggal hari ini atau mendatang.',422);
+    $max=$today->modify('+2 years');
+    if($date>$max||($admin&&$date<$today->modify('-2 years')))
         mobile_error('Tanggal kegiatan berada di luar rentang pengisian.',422);
     $note=mobile_text($b['note']??'',240);
     $q=$db->prepare('INSERT INTO mobile_bank_sampah_sessions_2610
       (session_date,note,created_by,updated_by) VALUES (?,?,?,?)');
     try{$q->execute([$date->format('Y-m-d'),$note,$uid,$uid]);}
-    catch(PDOException $e){mobile_error('Jadwal penimbangan untuk tanggal ini sudah ada.',409);}
+    catch(PDOException $e){mobile_error('Tanggal penimbangan sudah tersedia. Pilih tanggal tersebut dari daftar.',409);}
     $id=(int)$db->lastInsertId();
     $officers=$db->query('SELECT user_id FROM mobile_bank_sampah_officers_2610 WHERE active=1')->fetchAll(PDO::FETCH_COLUMN);
     foreach($officers as $officer)mobile_emit('bank_sampah_tugas','Jadwal Bank Sampah Cikoko',
