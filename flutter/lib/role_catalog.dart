@@ -30,6 +30,9 @@ const roleFeatures = <String,RoleFeature>{
   'jumantik': RoleFeature('Jumantik Mandiri','Pelaporan mandiri dengan format warga terpisah','Jumantik Mandiri'),
   'jumantik_rt_rw': RoleFeature('Laporan Jumantik RT/RW','Foto pemeriksaan dengan koordinator dan wilayah akun','Laporan Jumantik RT/RW'),
   'jumantik_news': RoleFeature('Berita Jumantik Cikoko','Hasil pemeriksaan lingkungan yang dipublikasikan','Berita Jumantik Cikoko'),
+  'jumantik_mandiri_news': RoleFeature('Berita Jumantik Mandiri Warga','Hasil laporan mandiri yang telah diverifikasi','Berita Jumantik Mandiri Warga'),
+  'jumantik_mandiri_review': RoleFeature('Verifikasi Jumantik Mandiri','Verifikasi dan publikasi laporan mandiri warga','Verifikasi Jumantik Mandiri',capability:'role:manage'),
+  'jumantik_review': RoleFeature('Verifikasi Jumantik','Periksa foto, lokasi dan terbitkan laporan Jumantik','Verifikasi Jumantik',capability:'role:manage'),
   'kegiatan': RoleFeature('Laporan Kegiatan','Kirim laporan dan foto kegiatan','Laporan Kegiatan',capability:'report:kegiatan'),
   'lpj_rt': RoleFeature('Laporan LPJ RT','Keuangan, persetujuan Ketua dan Bendahara RT','Laporan LPJ RT'),
   'lpj_rw': RoleFeature('Laporan LPJ RW','Keuangan, persetujuan Ketua dan Bendahara RW','Laporan LPJ RW'),
@@ -66,6 +69,7 @@ const roleFeatures = <String,RoleFeature>{
   'approval': RoleFeature('Persetujuan Lurah','Persetujuan dokumen resmi','Persetujuan Lurah',connected:false),
   'attendance': RoleFeature('Kehadiran','Absensi pegawai dan jadwal','Kehadiran',connected:false),
   'roster': RoleFeature('Jadwal Piket & Dinas','Jadwal tugas harian pegawai','Jadwal Piket',connected:false),
+  'bank_sampah': RoleFeature('Bank Sampah Cikoko','Hasil timbang, petugas PJLP, anggota dan rekap tahunan','Bank Sampah Cikoko'),
   'pppk_attendance': RoleFeature('Kehadiran','Shift dan bukti kegiatan PPPK sendiri','Kehadiran PPPK'),
   'pppk_leave': RoleFeature('Cuti Pegawai','Pengajuan dan riwayat cuti PPPK sendiri','Cuti PPPK'),
   'pppk_leave_admin': RoleFeature('Kelola Cuti PPPK','Jatah dan persetujuan cuti PPPK','Kelola Cuti PPPK'),
@@ -81,12 +85,12 @@ const roleFeatures = <String,RoleFeature>{
   'profile': RoleFeature('Profil Akun','Identitas dan data akun','Profil'),
 };
 const roleMenus = <String,List<String>>{
- 'admin':['pppk_leave_admin','reviews_manage','pjlp_2557','performance_pppk','leave_admin','push_manage','pages_manage','bendahara_manage','accounts_manage','services_manage','lpj_rt','lpj_rw','wilayah_ketua','surat_wilayah','verify_waris','verify_kegiatan','chat_admin','news_add','announce_add','archive_add','archive_list','role_manage','news','announcements','gallery','services'],
- 'admin_kelurahan':['pppk_leave_admin','reviews_manage','performance_pppk','leave_admin','leave_approval','push_manage','pages_manage','surat_wilayah','verify','archive_add','archive_list','news_add','announce_add','chat_admin','news','announcements','services'],
- 'lurah':['pppk_leave_admin','leave_approval','verify','archive_list','approval','monitor','protap','performance','news','announcements'],
- 'asn':['staff_asn_guide','pppk_leave_admin','pjlp_2557','leave_approval','verify','archive_list','monitor','kegiatan','news','announcements'],
- 'pppk':['pppk_attendance','performance_pppk','pppk_leave','kegiatan','history','news'],
- 'pjlp':['attendance_staff','performance_pjlp','leave_pjlp','kegiatan','protap','history'],
+ 'admin':['jumantik_mandiri_review','jumantik_review','pppk_leave_admin','reviews_manage','pjlp_2557','performance_pppk','leave_admin','push_manage','pages_manage','bendahara_manage','accounts_manage','services_manage','lpj_rt','lpj_rw','wilayah_ketua','surat_wilayah','verify_waris','verify_kegiatan','chat_admin','news_add','announce_add','archive_add','archive_list','role_manage','news','announcements','gallery','services','bank_sampah'],
+ 'admin_kelurahan':['pppk_leave_admin','reviews_manage','performance_pppk','leave_admin','leave_approval','push_manage','pages_manage','surat_wilayah','verify','archive_add','archive_list','news_add','announce_add','chat_admin','news','announcements','services','bank_sampah'],
+ 'lurah':['pppk_leave_admin','leave_approval','verify','archive_list','approval','monitor','protap','performance','news','announcements','bank_sampah'],
+ 'asn':['staff_asn_guide','pppk_leave_admin','pjlp_2557','leave_approval','verify','archive_list','monitor','kegiatan','news','announcements','bank_sampah'],
+ 'pppk':['pppk_attendance','performance_pppk','pppk_leave','kegiatan','history','news','bank_sampah'],
+ 'pjlp':['attendance_staff','performance_pjlp','leave_pjlp','kegiatan','protap','history','bank_sampah'],
  'ptsp':['staff_ptsp_guide','verify','archive_list','kegiatan','history','services','announcements'],
  'sosial':['staff_social_guide','kegiatan','history','services','news','announcements'],
  'dukcapil':['civil','kegiatan','history','services','announcements'],
@@ -125,15 +129,16 @@ const capabilityMenuBindings = <String,List<String>>{
 };
 List<RoleFeature> modulesForRole(String role, Map<String,bool> caps) {
  final names=<String>{...(roleMenus[role]??roleMenus['warga']!)};
- if(role!='admin')names.add('jumantik');
+ if(role!='admin'&&role!='admin_kelurahan')names.add('jumantik');
  if(role=='jumantik_rt'||role=='jumantik_rw')names.add('jumantik_rt_rw');
  names.add('jumantik_news');
+ names.add('jumantik_mandiri_news');
  for(final entry in capabilityMenuBindings.entries) {
   if(caps[entry.key]==true)names.addAll(entry.value);
  }
  return names.map((key)=>roleFeatures[key]!)
   .where((feature)=>(feature.capability==null || caps[feature.capability]==true) &&
     (feature.route!='Laporan Jumantik RT/RW' || role=='jumantik_rt'||role=='jumantik_rw') &&
-    (feature.route!='Jumantik Mandiri' || role!='admin'))
+    (feature.route!='Jumantik Mandiri' || (role!='admin'&&role!='admin_kelurahan')))
   .toList();
 }
