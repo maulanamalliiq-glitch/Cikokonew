@@ -5,7 +5,7 @@
 - Halaman **Laporan → Bank Sampah** menampilkan header biru **Cikoko Smart · Kelurahan Cikoko**, judul besar **Input Bank Sampah** dengan ikon daur ulang.
 - Kartu **Data Penimbangan**: Hari Minggu, **Tanggal** (pilih dari jadwal yang sudah dibuka Admin), **Petugas** (nama akun PJLP atau PPPK yang login).
 - Dua kartu hijau untuk **Total Kg** dan **Total Rupiah**. Angka dihitung langsung dari kolom input aktual; **324 Kg / Rp 231.000** hanya angka contoh pada mockup, bukan data palsu di aplikasi.
-- Tabel biru dengan kolom **No, Nama Anggota, Nama Barang, Hasil Timbangan (Kg), Jumlah (Rp)**. Baris diisi langsung di tabel; nama anggota dipilih dari daftar PJLP/PPPK aktif dan nama barang dari pilihan cepat atau teks bebas.
+- Tabel biru dengan kolom **No, Nama Anggota, Nama Barang, Hasil Timbangan (Kg), Jumlah (Rp)**. **Semua anggota PJLP/PPPK aktif sudah muncul sebagai baris kosong** berdasarkan daftar Admin. Petugas cukup mengisi nama barang, Kg dan Rp. Baris kosong tidak disimpan sebagai hasil setor. Untuk beberapa jenis barang dari satu anggota gunakan **Tambah Baris**. Nama barang tersedia sebagai pilihan cepat atau teks bebas.
 - Tabel bisa digeser mendatar pada HP sempit agar nama/angka tetap terbaca tanpa terpotong. Tidak mengubah lebar navbar bawah.
 - Tombol **Tambah Baris**, **Simpan Draft**, dan **Simpan Penimbangan** mempunyai aksi nyata.
 - Area petunjuk di bawah form menegaskan hak petugas, sumber data anggota, dan proses pengesahan Admin.
