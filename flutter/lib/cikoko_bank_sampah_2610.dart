@@ -510,35 +510,14 @@ class _BankSampahPage2610State extends State<BankSampahPage2610> {
           leading:Icon(Icons.event_busy_outlined),
           title:Text('Belum ada sesi penimbangan'),
           subtitle:Text('Super Admin membuat tanggal sebelum petugas mengisi data.'))),
-      if(sessions.isNotEmpty)
-        Padding(padding:const EdgeInsets.only(bottom:12),
-          child:DropdownButtonFormField<int>(
-            key:ValueKey('bank_date_'+(sessionId??0).toString()),
-            initialValue:sessionId,
-            isExpanded:true,
-            decoration:const InputDecoration(
-              prefixIcon:Icon(Icons.calendar_today_outlined),
-              labelText:'Pilih tanggal timbang',
-              border:OutlineInputBorder()),
-            items:[
-              for(final s in sessions)
-                DropdownMenuItem<int>(
-                  value:int.tryParse(s['id'].toString())??0,
-                  child:Text(CikokoBankSampahApi2610.dateLocal(
-                    s['session_date'].toString())+
-                    (s['status']=='closed'?' · Disahkan':
-                     s['status']=='submitted'?' · Menunggu Admin':' · Draft')),
-                ),
-            ],
-            onChanged:(v){if(v!=null)changeSession(v);},
-          ),
-        ),
       if(session.isNotEmpty)
         CikokoBankSampahMockup2613(
           key:ValueKey('bank_form_mockup_2613_'+(sessionId??0).toString()),
           session:session,
           entries:entries,
           members:users,
+          availableSessions:sessions,
+          onSelectSession:changeSession,
           officerName:(widget.api.profile?['name']??'Petugas Bank Sampah').toString(),
           canInput:canInput,
           canManage:canManage,
