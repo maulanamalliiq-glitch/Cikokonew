@@ -20,6 +20,10 @@ foreach([
     if($item==='Anda tidak dapat mengubahnya')continue;
     assert2613(str_contains($ui,$item),'Label mockup hilang: '.$item);
 }
+assert2613(str_contains($ui,"for(final member in eligibleMembers)"),
+    'Semua anggota PJLP/PPPK aktif harus muncul otomatis pada tabel.');
+assert2613(str_contains($ui,'if(row.id==null&&!_hasContent(row))continue;'),
+    'Baris anggota yang masih kosong tidak boleh disimpan sebagai setoran.');
 assert2613(str_contains($ui,"widget.request('entry_save'"),
     'Simpan Draft harus menulis data ke API.');
 assert2613(str_contains($ui,"widget.request('session_submit'"),
