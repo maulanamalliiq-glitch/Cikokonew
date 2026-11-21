@@ -277,6 +277,7 @@ jobs:
           cp cpanel/mobile-api/boarding_houses.php server-patch/mobile-api/
           cp cpanel/mobile-api/pppk_staff.php server-patch/mobile-api/
           mkdir -p server-patch/sql
+          cp cpanel/mobile-api/migrate_jumantik_2606.sql server-patch/sql/
           cp cpanel/mobile-api/migrate_pppk_staff_2570.sql server-patch/sql/
           cp cpanel/mobile-api/migrate_reviews_2571.sql server-patch/sql/
           cp cpanel/mobile-api/migrate_chat_2544.sql server-patch/sql/
