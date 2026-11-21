@@ -444,7 +444,8 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
   Widget _memberCell(_WasteEntry2613 row){
     final eligible=eligibleMembers;
     final exists=eligible.any((m)=>m['id'].toString()==row.memberId);
-    if(!editable||row.id!=null||!exists){
+    // The annual roster is fixed by Admin; only extra multi-item rows choose members.
+    if(!editable||row.id!=null||!row.extra||!exists){
       final names=widget.members.where((m)=>m['id'].toString()==row.memberId);
       final label=names.isNotEmpty?names.first['name'].toString():row.memberName;
       return Tooltip(message:label,child:Text(label,
@@ -472,6 +473,95 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
     width:width,child:Padding(padding:const EdgeInsets.symmetric(
       horizontal:3,vertical:6),child:child));
 
+  Widget _compactRows(){
+    // Narrow Android screens: keep all data visible without horizontal clipping.
+    // One short identity line, then three inline fields (barang, Kg, Rupiah).
+    return Column(children:[
+      Container(
+        key:const Key('bank_table_compact_header_2614'),
+        width:double.infinity,
+        decoration:BoxDecoration(color:navy,borderRadius:BorderRadius.circular(7)),
+        padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
+        child:const Text('NO  ·  NAMA ANGGOTA  ·  BARANG / Kg / Rp',
+          style:TextStyle(color:Colors.white,fontSize:11,fontWeight:FontWeight.w800))),
+      for(var i=0;i<rows.length;i++)Container(
+        key:ValueKey('bank_member_row_2614_'+i.toString()),
+        padding:const EdgeInsets.symmetric(horizontal:7,vertical:7),
+        decoration:BoxDecoration(color:i.isEven?Colors.white:const Color(0xfff7faff),
+          border:const Border(bottom:BorderSide(color:Color(0xffe1e9f2)))),
+        child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          Row(children:[
+            Container(
+              width:25,height:23,alignment:Alignment.center,
+              decoration:BoxDecoration(color:const Color(0xffe9eff6),
+                borderRadius:BorderRadius.circular(6)),
+              child:Text((i+1).toString(),
+                style:const TextStyle(fontWeight:FontWeight.w800,fontSize:11))),
+            const SizedBox(width:7),
+            Expanded(child:_memberCell(rows[i])),
+            if(rows[i].extra&&rows[i].id==null&&editable)
+              SizedBox(width:30,height:28,child:IconButton(
+                tooltip:'Hapus baris tambahan',
+                padding:EdgeInsets.zero,
+                icon:const Icon(Icons.close,size:18,color:Colors.redAccent),
+                onPressed:busy?null:(){
+                  setState((){final removed=rows.removeAt(i);removed.dispose();});
+                })),
+          ]),
+          const SizedBox(height:5),
+          Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Expanded(flex:5,child:Column(
+              crossAxisAlignment:CrossAxisAlignment.start,children:[
+                const Text('Nama Barang',
+                  style:TextStyle(fontSize:9.3,color:Color(0xff566c83))),
+                const SizedBox(height:2),
+                _textField(rows[i].item,'Kardus / Botol',
+                  changed:(_)=>_modified(rows[i]),
+                  suffix:editable?PopupMenuButton<String>(
+                    tooltip:'Pilih barang',
+                    padding:EdgeInsets.zero,
+                    icon:const Icon(Icons.expand_more,size:17),
+                    onSelected:(value){
+                      if(value=='Lainnya')return;
+                      rows[i].item.text=value;_modified(rows[i]);
+                    },
+                    itemBuilder:(_)=>[
+                      for(final item in items)
+                        PopupMenuItem(value:item,child:Text(item)),
+                    ],
+                  ):null),
+              ])),
+            const SizedBox(width:6),
+            Expanded(flex:2,child:Column(
+              crossAxisAlignment:CrossAxisAlignment.start,children:[
+                const Text('Kg',
+                  style:TextStyle(fontSize:9.3,color:Color(0xff566c83))),
+                const SizedBox(height:2),
+                _textField(rows[i].kg,'0.0',
+                  keyboard:const TextInputType.numberWithOptions(decimal:true),
+                  changed:(_)=>_modified(rows[i])),
+              ])),
+            const SizedBox(width:6),
+            Expanded(flex:3,child:Column(
+              crossAxisAlignment:CrossAxisAlignment.start,children:[
+                const Text('Jumlah (Rp)',
+                  style:TextStyle(fontSize:9.3,color:Color(0xff566c83))),
+                const SizedBox(height:2),
+                _textField(rows[i].rupiah,'0',
+                  keyboard:TextInputType.number,
+                  changed:(_)=>_modified(rows[i])),
+              ])),
+          ]),
+        ]),
+      ),
+      if(rows.isEmpty)const Padding(
+        padding:EdgeInsets.all(12),
+        child:Text('Belum ada anggota Bank Sampah aktif. Admin dapat '
+          'memeriksa daftar PJLP/PPPK.',
+          style:TextStyle(fontSize:11,color:Colors.blueGrey))),
+    ]);
+  }
+
   Widget _editableTable(){
     // Compact 362dp layout: five columns fit typical Android widths.
     // On narrower screens the table alone scrolls horizontally.
@@ -485,7 +575,10 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
       decoration:_cardDecoration(),clipBehavior:Clip.hardEdge,
       child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
         _banner('Daftar Penimbangan Bank Sampah',Icons.table_rows_outlined),
-        SingleChildScrollView(
+        LayoutBuilder(builder:(context,constraints)=>
+          constraints.maxWidth<470
+          ?_compactRows()
+          :SingleChildScrollView(
           key:const Key('bank_sampah_table_scroll_2613'),
           scrollDirection:Axis.horizontal,
           child:SizedBox(width:fullWidth,child:Column(children:[
@@ -551,9 +644,9 @@ class _CikokoBankSampahMockup2613State extends State<CikokoBankSampahMockup2613>
               child:Text('Belum ada penimbangan. Tambahkan baris untuk mulai.',
                 style:TextStyle(color:Colors.blueGrey,fontSize:12))),
           ])),
-        ),
+        )),
         const Padding(padding:EdgeInsets.fromLTRB(10,5,10,9),
-          child:Text('Geser tabel ke samping jika diperlukan. Ketuk nama barang untuk memilih jenis.',
+          child:Text('Daftar anggota PJLP/PPPK terisi otomatis. Isi barang, Kg dan Rupiah.',
             style:TextStyle(fontSize:10,color:Colors.blueGrey))),
       ]),
     );
