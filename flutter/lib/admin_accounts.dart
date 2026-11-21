@@ -26,6 +26,7 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
   final email = TextEditingController();
   final rt = TextEditingController();
   final rw = TextEditingController();
+  final coordinator = TextEditingController();
   final formKey = GlobalKey<FormState>();
 
   Map<String, String> roles = {};
@@ -36,7 +37,11 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
   bool loading = true;
   bool showForm = true;
 
-  bool get needsRt => selectedRole == 'rt' || selectedRole == 'bendahara_rt';
+  bool get isJumantik => selectedRole == 'jumantik_rt' || selectedRole == 'jumantik_rw';
+  bool get needsRt => selectedRole == 'rt' ||
+      selectedRole == 'bendahara_rt' ||
+      selectedRole == 'jumantik_rt' ||
+      selectedRole == 'jumantik_rw';
   bool get needsRw => needsRt ||
       selectedRole == 'rw' ||
       selectedRole == 'bendahara_rw' ||
@@ -50,7 +55,7 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
 
   @override
   void dispose() {
-    for (final controller in [name, username, password, phone, email, rt, rw]) {
+    for (final controller in [name, username, password, phone, email, rt, rw, coordinator]) {
       controller.dispose();
     }
     super.dispose();
@@ -101,6 +106,25 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
         selectedRole != 'bendahara_rt' &&
         selectedRole != 'bendahara_rw') return;
     if (!formKey.currentState!.validate()) return;
+    if (name.text.trim().length < 3 ||
+        !RegExp(r'^[a-zA-Z0-9_.-]{4,40}$').hasMatch(username.text.trim()) ||
+        password.text.length < 5) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Nama minimal 3 huruf, username 4–40 karakter (huruf/angka/._-), dan password minimal 5 karakter.')));
+      return;
+    }
+    if (isJumantik && (rt.text.trim().isEmpty || rw.text.trim().isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Akun Jumantik wajib memiliki RT dan RW.')));
+      return;
+    }
+    if (isJumantik && (coordinator.text.trim().length < 3 ||
+        !RegExp(r'^[0-9]{1,3}$').hasMatch(rt.text.trim()) ||
+        !RegExp(r'^[0-9]{1,3}$').hasMatch(rw.text.trim()))) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Isi Koordinator RW dan nomor RT/RW (1–3 angka).')));
+      return;
+    }
     setState(() => busy = true);
     try {
       await widget.api.call('accounts_create', body: {
@@ -112,6 +136,7 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
         'email': email.text.trim(),
         'rt': needsRt ? rt.text.trim() : '',
         'rw': needsRw ? rw.text.trim() : '',
+        'jumantik_coordinator': isJumantik ? coordinator.text.trim() : '',
       });
       if (!mounted) return;
       name.clear();
@@ -121,13 +146,14 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
       email.clear();
       rt.clear();
       rw.clear();
+      coordinator.clear();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Akun petugas berhasil dibuat.')));
       await load();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal membuat akun: $e')));
+          SnackBar(content: Text('Gagal membuat akun: ${cikokoFormalMessage(e)}')));
       }
     } finally {
       if (mounted) setState(() => busy = false);
@@ -170,6 +196,50 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Akun berhasil dihapus permanen.')));
       await load();
     }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Gagal menghapus: ${cikokoFormalMessage(e)}')));}
+  }
+
+  Future<void> editJumantikArea(Map<String,dynamic> account) async {
+    if (account['role'] != 'jumantik_rt' && account['role'] != 'jumantik_rw') return;
+    final rtInput = TextEditingController(text: (account['rt'] ?? '').toString());
+    final rwInput = TextEditingController(text: (account['rw'] ?? '').toString());
+    final coordInput = TextEditingController(text: (account['jumantik_coordinator'] ?? '').toString());
+    final confirmed = await showDialog<bool>(context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Perbaiki Wilayah Jumantik'),
+        content: SingleChildScrollView(child: Column(
+          mainAxisSize: MainAxisSize.min, children: [
+            Text((account['name'] ?? '').toString()),
+            const SizedBox(height: 12),
+            TextField(controller: rtInput, keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'RT (1–3 angka)')),
+            TextField(controller: rwInput, keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'RW (1–3 angka)')),
+            TextField(controller: coordInput,
+              decoration: const InputDecoration(labelText: 'Koordinator Jumantik RW')),
+          ],
+        )),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false), child: const Text('Batal')),
+          FilledButton(onPressed: () => Navigator.pop(dialog, true), child: const Text('Simpan')),
+        ],
+      ));
+    if (confirmed == true) {
+      try {
+        await widget.api.call('accounts_jumantik_area_update', body: {
+          'id': account['id'], 'rt': rtInput.text.trim(), 'rw': rwInput.text.trim(),
+          'jumantik_coordinator': coordInput.text.trim(),
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Wilayah dan koordinator Jumantik diperbarui.')));
+          await load();
+        }
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Gagal memperbarui wilayah: ${cikokoFormalMessage(e)}')));
+      }
+    }
+    rtInput.dispose(); rwInput.dispose(); coordInput.dispose();
   }
 
   Future<void> resetPassword(Map<String,dynamic> account) async {
@@ -342,6 +412,8 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
                       keyboard: TextInputType.number),
                   if (needsRw) field(rw, 'RW', hint: 'Contoh: 001',
                       keyboard: TextInputType.number),
+                  if (isJumantik) field(coordinator, 'Koordinator Jumantik RW',
+                      hint: 'Nama koordinator RW yang ditetapkan Admin'),
                   field(phone, 'Nomor telepon (opsional)', required: false,
                       keyboard: TextInputType.phone),
                   field(email, selectedRole == 'ppsu' ? 'Email PPSU (wajib untuk OTP)' : 'Email (opsional)',
@@ -399,10 +471,13 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
                 onSelected:(value){
                   if(value=='status')changeStatus(account);
                   if(value=='delete')deleteAccount(account);
+                  if(value=='area')editJumantikArea(account);
                 },
                 itemBuilder:(_)=>[
                   PopupMenuItem(value:'status',child:Text(account['active']==true?'Nonaktifkan Akun':'Aktifkan Akun')),
                   const PopupMenuItem(value:'delete',child:Text('Hapus Permanen',style:TextStyle(color:Colors.red))),
+                  if (account['role']=='jumantik_rt'||account['role']=='jumantik_rw')
+                    const PopupMenuItem(value:'area',child:Text('Atur RT/RW dan Koordinator')),
                 ],
               ),
               IconButton(tooltip:'Reset password pegawai',icon:const Icon(Icons.lock_reset_outlined),
