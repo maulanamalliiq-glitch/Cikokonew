@@ -227,6 +227,10 @@ class _LoginState extends State<LoginPage>{final user=TextEditingController(),pa
        onPressed:busy?null:submit,
        child:busy?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):
           Text(signup?'Daftar Sekarang':'Masuk',style:const TextStyle(fontWeight:FontWeight.w800)))),
+      const SizedBox(height:8),
+      TextButton(onPressed:busy?null:()=>setState(()=>signup=!signup),
+       child:Text(signup?'Sudah punya akun? Masuk':'Belum punya akun? Registrasi',
+         style:const TextStyle(color:V6.blue,fontSize:12,fontWeight:FontWeight.w700))),
       if(!signup)...[
         const SizedBox(height:12),
         OutlinedButton.icon(
@@ -240,10 +244,6 @@ class _LoginState extends State<LoginPage>{final user=TextEditingController(),pa
           textAlign:TextAlign.center,
           style:TextStyle(fontSize:11,color:V6.secondary)),
       ],
-      const SizedBox(height:8),
-      TextButton(onPressed:busy?null:()=>setState(()=>signup=!signup),
-       child:Text(signup?'Sudah punya akun? Masuk':'Belum punya akun? Registrasi',
-         style:const TextStyle(color:V6.blue,fontSize:12,fontWeight:FontWeight.w700))),
       const SizedBox(height:15),
       OutlinedButton.icon(
        onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(
