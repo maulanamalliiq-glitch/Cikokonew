@@ -188,9 +188,10 @@ class _CikokoReportsWorkspace2611State extends State<CikokoReportsWorkspace2611>
           icon:const Icon(Icons.arrow_back,size:19)),
         Expanded(child:Text(title,overflow:TextOverflow.ellipsis,
           style:const TextStyle(fontSize:14,fontWeight:FontWeight.w800))),
-        IconButton(onPressed:()=>shell.currentState?.openDrawer(),
-          tooltip:'Pilih laporan lain',
-          icon:const Icon(Icons.menu_open_outlined)),
+        if(MediaQuery.sizeOf(context).width<730)
+          IconButton(onPressed:()=>shell.currentState?.openDrawer(),
+            tooltip:'Pilih laporan lain',
+            icon:const Icon(Icons.menu_open_outlined)),
       ])),
     const Divider(height:1),
     Expanded(child:widget.buildReport(chosenRoute!)),
