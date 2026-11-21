@@ -177,12 +177,24 @@ if ($action === 'admin_list' || $action === 'admin_publish' || $action === 'admi
     $decision = (string)($b['decision']??'');
     if (!$id || !in_array($decision,['publish','reject'],true))
         mobile_error('Keputusan atau ID laporan tidak valid.',422);
+    $ownerQ = $db->prepare('SELECT user_id FROM mobile_jumantik_reports WHERE id=? AND status="pending"');
+    $ownerQ->execute([$id]);
+    $ownerId = (string)($ownerQ->fetchColumn() ?: '');
+    if ($ownerId==='') mobile_error('Laporan tidak ada atau sudah diperiksa.',409);
     $newStatus = $decision === 'publish' ? 'published' : 'rejected';
     $q = $db->prepare('UPDATE mobile_jumantik_reports SET status=?,
         published_at=CASE WHEN ?="published" THEN NOW() ELSE NULL END,
         reviewed_at=NOW(),reviewed_by=? WHERE id=? AND status="pending"');
     $q->execute([$newStatus,$newStatus,(string)$actor['user_id'],$id]);
     if ($q->rowCount()!==1) mobile_error('Laporan tidak ada atau sudah diperiksa.',409);
+    mobile_emit('jumantik_rt_rw_status',
+        $newStatus==='published'?'Laporan Jumantik RT/RW diverifikasi':'Laporan Jumantik RT/RW ditolak',
+        $newStatus==='published'?'Laporan Anda sudah diterbitkan Super Admin.':'Laporan perlu diperbaiki. Periksa kembali dengan petugas.',
+        'personal',$ownerId);
+    mobile_emit('jumantik_rt_rw_review','Verifikasi Jumantik RT/RW selesai',
+        'Keputusan laporan #'.$id.': '.$newStatus.'.','personal','admin');
+    if($newStatus==='published') mobile_emit('jumantik_rt_rw_terbaru','Berita Jumantik Cikoko terbaru',
+        'Laporan Jumantik RT/RW baru telah diperiksa Super Admin.','public');
     mobile_json(['ok'=>true,'message'=>$newStatus==='published'
         ? 'Laporan berhasil diterbitkan sebagai Berita Jumantik.'
         : 'Laporan ditolak. Tidak diterbitkan.']);
@@ -256,4 +268,9 @@ try {
     if ($photoName!==null) @unlink(__DIR__.'/private/'.$photoName);
     throw $e;
 }
-mobile_json(['ok'=>true,'message'=>'Laporan diterima dan menunggu verifikasi Super Admin.']);
+$newId=(int)$db->lastInsertId();
+mobile_emit('jumantik_rt_rw_status','Laporan Jumantik RT/RW diterima',
+    'Laporan #'.$newId.' menunggu verifikasi Super Admin.','personal',$uid);
+mobile_emit('jumantik_rt_rw_review','Laporan Jumantik RT/RW baru',
+    'Ada laporan Jumantik RT/RW #'.$newId.' untuk diperiksa.','personal','admin');
+mobile_json(['ok'=>true,'id'=>$newId,'message'=>'Laporan diterima dan menunggu verifikasi Super Admin.']);
