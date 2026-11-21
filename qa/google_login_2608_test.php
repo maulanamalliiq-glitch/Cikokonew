@@ -45,4 +45,27 @@ gassert(str_contains($api,"'google_login','google_link'"),'Dedicated API Google 
 gassert(str_contains($api,"require_once __DIR__.'/bootstrap.php'"),'Google route must use existing token session bootstrap');
 gassert(str_contains($app,'signIn.authenticate()'),'Native Google login missing');
 gassert(str_contains($sql,'CREATE TABLE IF NOT EXISTS mobile_google_accounts_2608'),'Additive migration missing');
-echo "Cikoko Google SSO 2608 QA OK\n";
+// Google picture comes from a verified ID-token claim. Only approved Google
+// hosts can be downloaded; existing uploaded Cikoko avatars must be preserved.
+gassert(cikoko_google_picture_url('https://lh3.googleusercontent.com/a/ACg8-test=s96-c')
+  ==='https://lh3.googleusercontent.com/a/ACg8-test=s96-c',
+  'Google picture host was rejected');
+foreach([
+  'http://lh3.googleusercontent.com/a/x',
+  'https://lh3.googleusercontent.com.evil.test/a/x',
+  'https://lh3.googleusercontent.com@evil.test/a/x',
+  'https://127.0.0.1/a/x',
+  'https://lh3.googleusercontent.com:8443/a/x',
+  'file:///etc/passwd',
+  'https://evil.test/x'
+] as $bad)gassert(cikoko_google_picture_url($bad)===null,
+  'Remote picture URL should be rejected: '.$bad);
+gassert(str_contains($source,"cikoko_google_autofill(\$user,\$identity)"),
+  'Google login must backfill profile data');
+gassert(str_contains($source,"trim((string)(\$row['photo_name']??''))===''"),
+  'A manually uploaded profile photo must not be overwritten');
+gassert(str_contains($source,"CURLOPT_FOLLOWLOCATION=>false"),
+  'Remote profile photo must not follow redirects');
+gassert(str_contains($source,"2*1024*1024"),
+  'Google profile photo must be size-limited');
+echo "Cikoko Google SSO 2608 and profile sync QA OK\n";
