@@ -151,7 +151,7 @@ function ckbs_schedule(int $year,string $cadence,int $anchor):array {
         $first=new DateTimeImmutable(sprintf('%04d-%02d-01',$year,$month),
               new DateTimeZone('Asia/Jakarta'));
         $offset=(7-(int)$first->format('w'))%7;
-        $days=$cadence==='twice_monthly'?[7+$offset,21+$offset]:[7+$offset];
+        $days=$cadence==='twice_monthly'?[8+$offset,22+$offset]:[8+$offset];
         foreach($days as $day)$out[]=sprintf('%04d-%02d-%02d',$year,$month,$day);
     }
     return $out;
@@ -191,7 +191,7 @@ function ckbs_totals(array $rows):array {
 $action=(string)($_GET['action']??'');
 $method=(string)($_SERVER['REQUEST_METHOD']??'GET');
 $methods=[
- 'summary'=>'GET','dashboard'=>'GET','members'=>'GET','schedule'=>'GET',
+ 'status'=>'GET','summary'=>'GET','dashboard'=>'GET','members'=>'GET','schedule'=>'GET',
  'session_entries'=>'GET','annual'=>'GET','annual_csv'=>'GET',
  'member_set'=>'POST','officer_set'=>'POST','config_set'=>'POST',
  'session_create'=>'POST','session_status'=>'POST','entry_save'=>'POST','entry_void'=>'POST'
@@ -204,6 +204,12 @@ $db=mobile_db();ckbs_schema($db);
 $users=ckbs_users();ckbs_member_init($db,$users);
 $uid=(string)$actor['user_id'];$role=(string)$actor['user_role'];
 $full=ckbs_full_view($db,$actor);$admin=$role==='admin';
+if($action==='status'){
+    $cfg=ckbs_config($db);
+    mobile_json(['ok'=>true,'role'=>$role,'can_input'=>ckbs_officer($db,$actor),
+      'can_view_full'=>$full,'can_manage'=>$admin,
+      'cadence'=>$cfg['cadence'],'anchor_month'=>(int)$cfg['anchor_month']]);
+}
 if($action==='summary'){
     ckbs_only_role($actor,CKBS_ROLE_MEMBER);
     $year=ckbs_year($_GET['year']??date('Y'));
