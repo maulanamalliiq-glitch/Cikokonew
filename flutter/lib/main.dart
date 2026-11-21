@@ -30,6 +30,7 @@ import 'integrated_services.dart';
 import 'service_requirements.dart';
 import 'cikoko_jumantik_2605.dart';
 import 'app_update_2606.dart';
+import 'jumantik_review_2606.dart';
 import 'waris_requirements.dart';
 import 'admin_accounts.dart';
 import 'mobile_editor.dart';
@@ -627,6 +628,10 @@ class _HomeState extends State<HomePage> {
         :const Center(child:Text('Menu ini khusus akun selain Super Admin.'));
     case 'Berita Jumantik Cikoko':
       return const JumantikNews2605();
+    case 'Verifikasi Jumantik':
+      return role=='admin'
+        ?CikokoJumantikReview2606(api:api)
+        :const Center(child:Text('Khusus Super Admin.'));
     case 'Alur PTSP':return role=='ptsp'
         ? const CikokoStaffGuidePage(role:'ptsp')
         : const Center(child:Text('Khusus petugas PTSP.'));
