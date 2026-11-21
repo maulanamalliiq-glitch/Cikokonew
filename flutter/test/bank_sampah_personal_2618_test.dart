@@ -58,7 +58,8 @@ void main() {
       expect(find.text('Besi'),findsOneWidget);
       expect(find.text('Kardus'),findsNothing);
       expect(find.text('Botol Plastik'),findsNothing);
-      expect(find.text('3 Kg  |  Rp 15.000'),findsOneWidget);
+      expect(find.text('3 Kg  |  Rp 15.000'),findsNWidgets(2));
+      // Monthly total and the corresponding date subtotal correctly agree.
       expect(find.text('1 rincian barang'),findsOneWidget);
     });
 
