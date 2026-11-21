@@ -273,7 +273,7 @@ class V6ReportPanel extends StatelessWidget{
   final allowed=modules.map((x)=>x.route).toSet();
   final entries=isCitizen
    ?const [
-     ('Jumantik Mandiri','Jumantik Mandiri',Icons.health_and_safety_outlined),
+     ('Laporan Jumantik','Laporan Jumantik',Icons.health_and_safety_outlined),
      ('Pengaduan Warga','Hubungi Kami',Icons.campaign_outlined),
      ('Riwayat Laporan','Riwayat',Icons.history_outlined)]
    :[

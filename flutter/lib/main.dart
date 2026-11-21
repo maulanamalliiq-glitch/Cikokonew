@@ -611,6 +611,11 @@ class _HomeState extends State<HomePage> {
     case 'TTD & Stempel':return RtRwSignerPage(api:api);
     case 'Wilayah Ketua RT/RW':return RtRwOfficerManager(api:api);
     case 'Laporan Jumantik':
+      return Jumantik2605Api.isStaff(role)
+        ?JumantikRtRw2605(api:api)
+        :(!guest && role!='admin'
+          ?const JumantikMandiri2605()
+          :const Center(child:Text('Silakan masuk untuk Jumantik Mandiri.')));
     case 'Laporan Jumantik RT/RW':
       return Jumantik2605Api.isStaff(role)
         ?JumantikRtRw2605(api:api)

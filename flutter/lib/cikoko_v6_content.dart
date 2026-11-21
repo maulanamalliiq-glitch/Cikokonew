@@ -20,7 +20,7 @@ class _V6ServicesState extends State<V6ServicesPage>{
  static const services=[
   ('Surat Ahli Waris','Pengajuan surat ahli waris','Surat','Surat Ahli Waris',Icons.description_outlined),
   ('Pengantar RT/RW','Pengajuan pengantar tingkat RT dan RW','Surat','Surat Pengantar RT/RW',Icons.home_work_outlined),
-  ('Jumantik Mandiri','Pemantauan mandiri, format warga menyusul','Laporan','Jumantik Mandiri',Icons.health_and_safety_outlined),
+  ('Laporan Jumantik','Pemantauan lingkungan dan jentik','Laporan','Laporan Jumantik',Icons.health_and_safety_outlined),
   ('Pengaduan Warga','Komunikasi dengan petugas kelurahan','Pengaduan','Hubungi Kami',Icons.forum_outlined),
   ('Riwayat Pengajuan','Pantau status surat dan laporan','Surat','Riwayat',Icons.fact_check_outlined),
   ('Layanan Pemerintah','Akses katalog layanan terkait','Lainnya','Katalog DKI',Icons.account_balance_outlined),
