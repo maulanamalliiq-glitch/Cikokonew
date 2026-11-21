@@ -37,6 +37,8 @@ void main() {
     expect(find.text('Cikoko Smart'),findsOneWidget);
     expect(find.text('Input Bank Sampah'),findsOneWidget);
     expect(find.text('Data Penimbangan'),findsOneWidget);
+    expect(find.byKey(const Key('bank_table_compact_header_2614')),findsOneWidget);
+    expect(find.byKey(const Key('bank_member_row_2614_0')),findsOneWidget);
     expect(find.text('15 November 2026'),findsOneWidget);
     expect(find.text('PETUGAS PPPK'),findsOneWidget);
     expect(find.text('0 Kg'),findsOneWidget);
