@@ -36,11 +36,15 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
   bool loading = true;
   bool showForm = true;
 
-  bool get needsRt => selectedRole == 'rt' || selectedRole == 'bendahara_rt';
+  bool get needsRt => selectedRole == 'rt' ||
+      selectedRole == 'bendahara_rt' ||
+      selectedRole == 'jumantik_rt' ||
+      selectedRole == 'jumantik_rw';
   bool get needsRw => needsRt ||
       selectedRole == 'rw' ||
       selectedRole == 'bendahara_rw' ||
-      selectedRole == 'lmk';
+      selectedRole == 'lmk' ||
+      selectedRole == 'jumantik_rw';
 
   @override
   void initState() {
@@ -101,6 +105,12 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
         selectedRole != 'bendahara_rt' &&
         selectedRole != 'bendahara_rw') return;
     if (!formKey.currentState!.validate()) return;
+    if ((selectedRole == 'jumantik_rt' || selectedRole == 'jumantik_rw') &&
+        (rt.text.trim().isEmpty || rw.text.trim().isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Akun Jumantik wajib memiliki RT dan RW.')));
+      return;
+    }
     setState(() => busy = true);
     try {
       await widget.api.call('accounts_create', body: {
@@ -127,7 +137,7 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal membuat akun: $e')));
+          SnackBar(content: Text('Gagal membuat akun: ${cikokoFormalMessage(e)}')));
       }
     } finally {
       if (mounted) setState(() => busy = false);
