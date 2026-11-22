@@ -2,6 +2,7 @@ import 'package:cikoko/api.dart';
 import 'package:cikoko/cikoko_home_sections.dart';
 import 'package:cikoko/cikoko_home_extra.dart';
 import 'package:cikoko/cikoko_v6_showcase.dart';
+import 'package:cikoko/cikoko_activity_updates_2614.dart';
 import 'package:cikoko/role_catalog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -59,7 +60,7 @@ void main(){
   expect(find.text('Pelayanan perizinan'),findsNothing);
  });
 
- testWidgets('Home removes the duplicate reports table and places status after hero',(tester)async{
+ testWidgets('Home places Berita before Agenda, then Status Surat and activity after Inovasi',(tester)async{
   await tester.pumpWidget(MaterialApp(home:Scaffold(body:V6Home(
    role:'warga',guest:false,modules:const <RoleFeature>[],api:HomeApiStub(),
    items:const [],letterCounts:const {'masuk':1,'proses':0,'selesai':29},
@@ -77,13 +78,17 @@ void main(){
     find.byKey(const Key('v6_home')),
   ).childrenDelegate as SliverChildListDelegate;
   final homeSections = children.children;
-  int positionOf<T extends Widget>() => homeSections.indexWhere((w) => w is T);
-  expect(positionOf<V6LetterStatusStrip>(), greaterThan(positionOf<V6Hero>()));
-  expect(positionOf<V6AnnouncementTicker>(), greaterThan(positionOf<V6LetterStatusStrip>()));
-  expect(positionOf<V6NewsCarousel>(), greaterThan(positionOf<V6AnnouncementTicker>()));
-  expect(positionOf<V6IntegratedServiceGrid>(), greaterThan(positionOf<V6NewsCarousel>()));
+  // 2620 wraps each native section in Padding so published layouts can
+  // reorder them without replacing the original interactive widgets.
+  int positionOf<T extends Widget>() => homeSections.indexWhere((w) =>
+    w is T || (w is Padding && w.child is T));
+  expect(positionOf<V6NewsCarousel>(), greaterThan(positionOf<V6Hero>()));
+  expect(positionOf<V6AnnouncementTicker>(), greaterThan(positionOf<V6NewsCarousel>()));
+  expect(positionOf<V6LetterStatusStrip>(), greaterThan(positionOf<V6AnnouncementTicker>()));
+  expect(positionOf<V6IntegratedServiceGrid>(), greaterThan(positionOf<V6LetterStatusStrip>()));
   expect(positionOf<V6BoardingHousePreview>(), greaterThan(positionOf<V6IntegratedServiceGrid>()));
   expect(positionOf<V6InnovationPreview>(), greaterThan(positionOf<V6BoardingHousePreview>()));
+  expect(positionOf<CikokoActivityUpdates2614>(), greaterThan(positionOf<V6InnovationPreview>()));
   expect(positionOf<V6QuickActions>(), -1);
   expect(positionOf<V6CitizenServices>(), -1);
  });
