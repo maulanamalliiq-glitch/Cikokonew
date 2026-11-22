@@ -10,19 +10,43 @@ function check2614(bool $value,string $error):void {
 }
 foreach([$home,$activity,$form,$api] as $src)check2614(is_string($src)&&strlen($src)>400,'Source missing.');
 
-$news=strpos($home,"V6NewsCarousel(items:items,api:api,onOpen:articleTap");
-$agenda=strpos($home,"V6AnnouncementTicker(items:items,onAll:()=>navigate('Pengumuman'))");
-$status=strpos($home,"V6LetterStatusStrip(counts:letterCounts,onStatus:letterStatus)");
-$kos=strpos($home,"V6BoardingHousePreview(api:api,onAll:()=>navigate('Data Rumah Kos'))");
-$inovasi=strpos($home,"V6InnovationPreview(api:api,onAll:()=>navigate('Inovasi'))");
-$activities=strpos($home,"CikokoActivityUpdates2614(role:role,navigate:navigate)");
-check2614($news!==false&&$agenda!==false&&$status!==false,
- 'Missing Berita/Agenda/Surat blocks.');
-check2614($news<$agenda&&$agenda<$status,
- 'The new home order must be Berita Terbaru, Pengumuman & Agenda, Status Surat.');
-check2614($kos!==false&&$inovasi!==false&&$activities!==false&&
- $kos<$inovasi&&$inovasi<$activities,
- 'Latest Jumantik/Bank Sampah must appear below Inovasi.');
+// Support both the historical static home and SDUI 2620. The latter must
+// preserve every native widget and the exact default order, but may re-order
+// it after a validated Admin Utama publication.
+if(str_contains($home,'CikokoUiHome2620(')){
+  $order=strpos($home,"'hero', 'news', 'announcement', 'bank_annual', 'letters'");
+  check2614($order!==false,
+    'SDUI default must retain Berita, Agenda, Bank Sampah and Surat order.');
+  foreach([
+    "'news': V6NewsCarousel(",
+    "'announcement': V6AnnouncementTicker(",
+    "'bank_annual': const BankSampahAnnualHome2618()",
+    "'letters': V6LetterStatusStrip(",
+    "'boarding': V6BoardingHousePreview(",
+    "'innovation': V6InnovationPreview(",
+    "'activity': CikokoActivityUpdates2614("
+  ] as $signature){
+    check2614(str_contains($home,$signature),'Missing protected home widget: '.$signature);
+  }
+  $client=file_get_contents($root.'/flutter/lib/cikoko_sdui_2620.dart');
+  check2614(str_contains($client,"key == 'letters'")&&
+    str_contains($client,"if (visible[key] != false || key == 'letters')"),
+    'Status pelayanan surat must always be visible in SDUI.');
+}else{
+  $news=strpos($home,"V6NewsCarousel(items:items,api:api,onOpen:articleTap");
+  $agenda=strpos($home,"V6AnnouncementTicker(items:items,onAll:()=>navigate('Pengumuman'))");
+  $status=strpos($home,"V6LetterStatusStrip(counts:letterCounts,onStatus:letterStatus)");
+  $kos=strpos($home,"V6BoardingHousePreview(api:api,onAll:()=>navigate('Data Rumah Kos'))");
+  $inovasi=strpos($home,"V6InnovationPreview(api:api,onAll:()=>navigate('Inovasi'))");
+  $activities=strpos($home,"CikokoActivityUpdates2614(role:role,navigate:navigate)");
+  check2614($news!==false&&$agenda!==false&&$status!==false,
+    'Missing Berita/Agenda/Surat blocks.');
+  check2614($news<$agenda&&$agenda<$status,
+    'The default home order must be Berita, Agenda, Surat.');
+  check2614($kos!==false&&$inovasi!==false&&$activities!==false&&
+    $kos<$inovasi&&$inovasi<$activities,
+    'Jumantik/Bank Sampah must appear below Inovasi.');
+}
 check2614(str_contains($activity,'Jumantik2605Api.news()')&&
  str_contains($activity,'CikokoJumantikMandiri2607.news()'),
  'Use only published Jumantik feeds, never unverified reports.');
