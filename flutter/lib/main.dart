@@ -4,6 +4,7 @@ import 'cikoko_unified_theme.dart';
 import 'cikoko_v4_public_pages.dart';
 import 'cikoko_v5_shell.dart';
 import 'cikoko_v6_showcase.dart';
+import 'cikoko_sdui_2620.dart';
 import 'cikoko_v6_content.dart';
 import 'cikoko_home_extra.dart';
 import 'cikoko_admin_content_hub.dart';
@@ -580,7 +581,11 @@ class _HomeState extends State<HomePage> {
         child:const Icon(Icons.chat_bubble_outline_rounded))
       :null,
   ));
-  Widget _page()=>_pageForRoute(section);
+  // Wrap every route with allowlisted, published presentation components.
+  // Native access rules and page widgets remain unchanged.
+  Widget _page()=>CikokoUiPageFrame2620(
+    key:ValueKey('sdui-page-$section'),pageId:section,
+    child:_pageForRoute(section));
   Widget _pageForRoute(String section){switch(section){
     case 'Dashboard':return home();
      case 'Modul Dinamis':return CikokoDynamicModulesPage(api:api,role:role);
