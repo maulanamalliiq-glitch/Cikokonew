@@ -115,39 +115,81 @@ button,.action{border:1px solid #d7e1f2;border-radius:10px;background:white;padd
 .toast{font-size:12px;color:#087441}.jsonhelp{padding:12px;background:#eef5ff;border-radius:12px;font-size:12px}
 @media(max-width:1150px){.layout{grid-template-columns:185px minmax(260px,1fr) 270px}.sidebar,.inspector{padding:11px}}
 @media(max-width:850px){.layout{grid-template-columns:1fr}.sidebar,.inspector{border:0;border-bottom:1px solid #dce5ef}.list-choice{grid-template-columns:repeat(2,1fr)}.stage{padding:12px}.canvas{max-width:480px}.bar{height:auto;min-height:67px;padding:10px}}
-</style></head><body>
-<header class="bar"><div class="logo">Cikoko Smart <small>Admin Utama · Editor Desain Aplikasi 2620</small></div>
-<div class="buttons"><a class="action" href="<?=esc(url('admin.php'))?>">Kembali ke Admin</a>
-<button form="saveForm" type="button" data-submit="save">Simpan Draft</button>
-<button form="saveForm" type="button" class="publish" data-submit="publish">Publikasikan</button></div></header>
+</style><link rel="stylesheet" href="<?=esc(url('assets/editor-mockup-2620.css'))?>"></head><body>
+<header class="bar">
+  <div class="logo"><span class="brand-mark" aria-hidden="true">✦</span><span>Cikoko Smart<small>Kelurahan Cikoko · Editor Desain Aplikasi 2620</small></span></div>
+  <div class="buttons"><a class="action" href="/admin">← Dashboard Admin</a>
+    <button form="saveForm" type="button" data-submit="save">▣ Simpan Draft</button>
+    <button form="saveForm" type="button" class="publish" data-submit="publish">✓ Publikasikan</button>
+  </div>
+</header>
 <div class="layout">
 <aside class="sidebar">
- <div class="title">Halaman yang diedit</div>
- <select id="pageSelect" aria-label="Pilih halaman"><?php foreach($pages as $id=>$label):?><option value="<?=esc($id)?>" <?=$id===$page?'selected':''?>><?=esc($label)?></option><?php endforeach;?></select>
- <div class="title">Tambah Komponen</div><div class="list-choice">
- <button type="button" data-add="heading">＋ Judul</button>
- <button type="button" data-add="text">＋ Teks</button>
- <button type="button" data-add="card">＋ Kartu</button>
- <button type="button" data-add="spacer">＋ Jarak</button>
- </div><p class="helper">Seret komponen di pratinjau untuk mengubah urutan. Klik komponen untuk mengatur detailnya.</p>
- <div class="divider"></div>
- <div class="title">Status Publikasi</div>
- <p>Revisi: <strong><?=esc($revision)?></strong></p><p class="helper">Publikasi terakhir: <?=esc($publishedAt?:'Belum dipublikasikan')?></p>
- <p class="helper"><?=$drafted?'Ada data draft untuk halaman ini.':'Halaman belum pernah disimpan sebagai draft.'?></p>
- <form method="post" id="rollbackForm"><input type="hidden" name="csrf" value="<?=esc(csrf())?>"><input type="hidden" name="page" value="<?=esc($page)?>">
- <button type="submit" name="action" value="revert_draft" onclick="return confirm('Kembalikan draft halaman ke publikasi?')">Pulihkan Draft</button>
- <button type="submit" name="action" value="rollback" onclick="return confirm('Publikasikan kembali versi sebelumnya untuk semua halaman?')">Rollback Publikasi</button>
- </form>
+  <div class="side-account"><span class="side-avatar" aria-hidden="true">♙</span><span><strong>Administrator</strong><small>Super Admin · Kelurahan Cikoko</small></span></div>
+  <div class="title">Menu Administrator</div>
+  <nav class="side-links" aria-label="Menu editor Cikoko">
+    <a href="/admin"><span class="side-icon">⌂</span> Dashboard</a>
+    <a href="?page=Dashboard" class="<?=$page==='Dashboard'?'active':''?>"><span class="side-icon">▦</span> Editor Beranda</a>
+    <a href="?page=Bank%20Sampah%20Cikoko" class="<?=$page==='Bank Sampah Cikoko'?'active':''?>"><span class="side-icon">♻</span> Bank Sampah</a>
+    <a href="?page=Layanan%20Online" class="<?=$page==='Layanan Online'?'active':''?>"><span class="side-icon">▤</span> Layanan Masyarakat</a>
+    <a href="?page=Berita%20%26%20Kegiatan" class="<?=$page==='Berita & Kegiatan'?'active':''?>"><span class="side-icon">▧</span> Berita Terbaru</a>
+    <a href="?page=Inovasi" class="<?=$page==='Inovasi'?'active':''?>"><span class="side-icon">✧</span> Inovasi</a>
+    <a href="?page=Profil"><span class="side-icon">♙</span> Profil Pengguna</a>
+    <a href="?page=Kinerja%20PPPK"><span class="side-icon">▥</span> Kinerja PPPK</a>
+    <a href="?page=Absensi%20dan%20Kinerja%20PJLP"><span class="side-icon">◷</span> Absensi PJLP</a>
+    <a href="?page=Laporan%20Jumantik"><span class="side-icon">▤</span> Jumantik</a>
+    <a href="?page=Percakapan%20Chat"><span class="side-icon">☏</span> Chat dan Notifikasi</a>
+  </nav>
+  <div class="title">Pengaturan Tampilan</div>
+  <nav class="side-links"><a class="active" href="?page=<?=rawurlencode($page)?>"><span class="side-icon">✥</span> Desain Aplikasi</a></nav>
+  <div class="tip">✧ &nbsp; Desain mengikuti layar Android melalui API. Fungsi formulir, hak akses, saldo, QR, dan database tidak dapat diubah melalui editor.</div>
 </aside>
 <main class="stage">
- <div class="head"><div><h1>Editor Visual Aplikasi</h1><p><?=esc($pages[$page])?> · Pratinjau responsif · Desain dari website</p></div>
- <span class="pill">Draft tidak tampil ke pengguna</span></div>
- <?php if($notice):?><div class="notice"><?=esc($notice)?></div><?php endif;?>
- <?php if($error):?><div class="error"><?=esc($error)?></div><?php endif;?>
- <div class="canvas" id="phone" aria-label="Pratinjau desain aplikasi">
-  <div class="app-top"><span>☰ &nbsp; Cikoko Smart</span><span>♧ &nbsp; ◯</span></div>
-  <div id="appBody" class="app-body" aria-live="polite"></div>
- </div><p class="helper" style="text-align:center">Pratinjau menggunakan data contoh. Angka, akun dan hak akses sebenarnya tetap dari API.</p>
+  <div class="head"><div><h1>Editor Desain Aplikasi</h1><p>Ubah susunan halaman, teks, warna dan komponen. Lihat hasilnya di pratinjau Android.</p></div><span class="pill">● Mode Draft · Belum dipublikasikan</span></div>
+  <?php if($notice):?><div class="notice"><?=esc($notice)?></div><?php endif;?>
+  <?php if($error):?><div class="error"><?=esc($error)?></div><?php endif;?>
+  <div class="studio-toolbar"><div class="tabs"><span class="tab selected">📱 Tampilan Android</span><span class="tab">↔ Grid responsif</span></div><span class="hint">Geser komponen atau gunakan tombol ↑ ↓ pada daftar susunan</span></div>
+  <div class="studio">
+    <section class="studio-panel" aria-label="Komponen dan pilihan halaman">
+      <h2>Pustaka Komponen <small>Tambahkan elemen ke halaman Anda</small></h2>
+      <div class="title">Halaman yang diedit</div>
+      <select id="pageSelect" aria-label="Pilih halaman"><?php foreach($pages as $id=>$label):?><option value="<?=esc($id)?>" <?=$id===$page?'selected':''?>><?=esc($label)?></option><?php endforeach;?></select>
+      <div class="title">Tambah Komponen</div>
+      <div class="list-choice">
+        <button type="button" data-add="heading"><span class="palette-icon">T</span> Judul / Heading</button>
+        <button type="button" data-add="text"><span class="palette-icon">☷</span> Teks / Keterangan</button>
+        <button type="button" data-add="card"><span class="palette-icon">▣</span> Kartu Informasi</button>
+        <button type="button" data-add="spacer"><span class="palette-icon">↕</span> Jarak / Spacer</button>
+      </div>
+      <p class="helper">Klik komponen di pratinjau untuk mengubah detailnya pada panel kanan. Komponen native menggunakan data API sebenarnya di aplikasi.</p>
+    </section>
+    <section class="studio-panel" aria-label="Urutan komponen">
+      <h2>Susunan Halaman <small>Urutkan komponen di halaman aktif</small></h2>
+      <div class="layer-list" id="layerList"></div>
+    </section>
+    <section class="phone-panel" aria-label="Pratinjau Android">
+      <h2>Pratinjau Android <span class="pill">Live preview</span></h2>
+      <div class="canvas" id="phone" aria-label="Pratinjau desain aplikasi">
+        <div class="phone-status"><span>9:50</span><span>▰▰ ▣ ▰ 80%</span></div>
+        <div class="app-top">
+          <div class="app-brand"><span style="font-size:16px" aria-hidden="true">☰</span><span class="app-brand-logo">✦</span><span class="app-brand-name"><strong>Cikoko Smart</strong><small>Kelurahan Cikoko · PJLP</small></span></div>
+          <span class="phone-actions" aria-hidden="true">♧ &nbsp; ◉</span>
+        </div>
+        <div id="appBody" class="app-body" aria-live="polite"></div>
+        <div class="phone-bottom" aria-label="Simulasi navigasi bawah">
+          <span><b>▦</b>Layanan</span><span><b>✦</b>Inovasi</span><span class="on"><b>⌂</b>Beranda</span><span><b>▤</b>Laporan</span><span><b>♙</b>Profil</span>
+        </div>
+      </div>
+      <p class="helper" style="text-align:center;max-width:330px">Angka dan konten pada pratinjau hanya contoh, bukan data akun. Hasil sebenarnya diambil melalui API.</p>
+    </section>
+  </div>
+  <div class="editor-info">
+    <div><strong>Revisi terbit: <?=esc($revision)?></strong><small>Terakhir dipublikasikan: <?=esc($publishedAt?:'Belum ada publikasi')?></small><small><?=$drafted?'Halaman ini mempunyai draft tersimpan.':'Halaman belum tersimpan sebagai draft.'?></small></div>
+    <form class="action-row" method="post" id="rollbackForm"><input type="hidden" name="csrf" value="<?=esc(csrf())?>"><input type="hidden" name="page" value="<?=esc($page)?>">
+      <button type="submit" name="action" value="revert_draft" onclick="return confirm('Kembalikan draft halaman ke publikasi?')">↶ Pulihkan Draft</button>
+      <button type="submit" name="action" value="rollback" onclick="return confirm('Publikasikan kembali versi sebelumnya untuk semua halaman?')">↺ Rollback Publikasi</button>
+    </form>
+  </div>
 </main>
 <aside class="inspector">
  <div class="title">Pengaturan Halaman</div>
@@ -166,6 +208,15 @@ button,.action{border:1px solid #d7e1f2;border-radius:10px;background:white;padd
   <button type="button" id="removeBlock">Hapus Komponen Tambahan</button>
  </div>
  <div class="divider"></div>
+ <div class="status-note"><strong>✓ Tampilan aman & responsif</strong>Desain dikirim melalui API. Kode Flutter, modul layanan, hak akses pegawai dan database tetap terlindungi.</div>
+<div class="editor-features"><div class="title">Bisa diatur dari website</div>
+<div class="feature"><span class="check">✓</span> Urutan komponen Beranda</div>
+<div class="feature"><span class="check">✓</span> Teks dan kartu tambahan</div>
+<div class="feature"><span class="check">✓</span> Warna aksen halaman</div>
+<div class="feature"><span class="check">✓</span> Tampilkan / sembunyikan komponen yang diizinkan</div>
+<div class="feature"><span class="check">✓</span> Draft, publikasi dan rollback</div>
+<div class="feature"><span>◷</span> Upload media dan editor bebas-piksel: tahap berikutnya</div>
+</div>
  <div class="jsonhelp"><strong>Keamanan tetap dijaga</strong><p>Editor hanya mengatur presentasi. Form, validasi, QR, tanda tangan, role, data pribadi dan persetujuan tetap diatur aplikasi/API asli.</p></div>
 </aside>
 </div>
