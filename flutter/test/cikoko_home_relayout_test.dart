@@ -78,7 +78,10 @@ void main(){
     find.byKey(const Key('v6_home')),
   ).childrenDelegate as SliverChildListDelegate;
   final homeSections = children.children;
-  int positionOf<T extends Widget>() => homeSections.indexWhere((w) => w is T);
+  // 2620 wraps each native section in Padding so published layouts can
+  // reorder them without replacing the original interactive widgets.
+  int positionOf<T extends Widget>() => homeSections.indexWhere((w) =>
+    w is T || (w is Padding && w.child is T));
   expect(positionOf<V6NewsCarousel>(), greaterThan(positionOf<V6Hero>()));
   expect(positionOf<V6AnnouncementTicker>(), greaterThan(positionOf<V6NewsCarousel>()));
   expect(positionOf<V6LetterStatusStrip>(), greaterThan(positionOf<V6AnnouncementTicker>()));
