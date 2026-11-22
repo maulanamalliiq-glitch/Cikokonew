@@ -6,6 +6,7 @@ import 'cikoko_home_extra.dart';
 import 'cikoko_reviews.dart';
 import 'cikoko_activity_updates_2614.dart';
 import 'bank_sampah_annual_home_2618.dart';
+import 'cikoko_sdui_2620.dart';
 
 /// Single design vocabulary based on the supplied Cikoko Smart V4 16-screen showcase.
 /// Keep server values and permissions as the source of truth: no demo reports or fake service data.
@@ -432,50 +433,63 @@ class V6Home extends StatelessWidget{
   required this.articleTap,required this.reload,
   this.websiteHeroUrl,this.websiteHeroFit=BoxFit.cover,
   this.websiteHeroAlignment=Alignment.center});
- @override Widget build(BuildContext context){
-  return RefreshIndicator(onRefresh:reload,child:ListView(
-   key:const Key('v6_home'),padding:const EdgeInsets.fromLTRB(14,12,14,30),
-   children:[
-    V6Hero(onServices:()=>navigate('Layanan Online'),
-      onAbout:()=>navigate('Tentang Kami'),
-      photoUrl:websiteHeroUrl,photoFit:websiteHeroFit,
-      photoAlignment:websiteHeroAlignment),
-    // Screenshot 3: Berita Terbaru occupies the previous Surat Masuk slot.
-    const SizedBox(height:12),
-    V6NewsCarousel(items:items,api:api,onOpen:articleTap,
-      onAll:()=>navigate('Berita & Kegiatan')),
-    const SizedBox(height:12),
-    V6AnnouncementTicker(items:items,onAll:()=>navigate('Pengumuman')),
-    // Rekap tahunan Bank Sampah, tepat sebelum Status Pelayanan Surat.
-    const SizedBox(height:12),
-    const BankSampahAnnualHome2618(),
-    const SizedBox(height:12),
-    V6LetterStatusStrip(counts:letterCounts,onStatus:letterStatus),
-    const SizedBox(height:14),
-    V6IntegratedServiceGrid(entries:integratedServices,onOpen:integratedTap),
-    const SizedBox(height:12),
-    V6BoardingHousePreview(api:api,onAll:()=>navigate('Data Rumah Kos')),
-    const SizedBox(height:16),
-    V6InnovationPreview(api:api,onAll:()=>navigate('Inovasi')),
-    const SizedBox(height:16),
-    // Screenshot 1: verified/public Jumantik and Bank Sampah activity updates.
-    CikokoActivityUpdates2614(role:role,navigate:navigate),
-    const SizedBox(height:17),
-    const V6Section(title:'Informasi & Kegiatan'),
-    Wrap(spacing:7,runSpacing:7,children:[
-      for(final item in const [
-       ('Agenda',Icons.event_outlined,'Agenda'),
-       ('Galeri',Icons.photo_library_outlined,'Galeri'),
-       ('Profil Wilayah',Icons.place_outlined,'Profil Wilayah')
-      ])ActionChip(label:Text(item.$1,style:const TextStyle(fontSize:10.5)),
-        avatar:Icon(item.$2,color:V6.blue,size:16),
-        onPressed:()=>navigate(item.$3)),
-    ]),
-    const SizedBox(height:15),
-    CikokoReviewSummary(api:api,onAll:()=>navigate('Ulasan Aplikasi')),
-   ],
-  ));
+ @override Widget build(BuildContext context) {
+  return CikokoUiHome2620(
+    onRefresh: reload,
+    defaultOrder: const [
+      'hero', 'news', 'announcement', 'bank_annual', 'letters',
+      'integrated_services', 'boarding', 'innovation',
+      'activity', 'shortcuts', 'reviews',
+    ],
+    childrenByKey: {
+      'hero': V6Hero(
+        onServices: () => navigate('Layanan Online'),
+        onAbout: () => navigate('Tentang Kami'),
+        photoUrl: websiteHeroUrl,
+        photoFit: websiteHeroFit,
+        photoAlignment: websiteHeroAlignment,
+      ),
+      'news': V6NewsCarousel(
+        items: items, api: api, onOpen: articleTap,
+        onAll: () => navigate('Berita & Kegiatan'),
+      ),
+      'announcement': V6AnnouncementTicker(
+        items: items, onAll: () => navigate('Pengumuman')),
+      'bank_annual': const BankSampahAnnualHome2618(),
+      'letters': V6LetterStatusStrip(
+        counts: letterCounts, onStatus: letterStatus),
+      'integrated_services': V6IntegratedServiceGrid(
+        entries: integratedServices, onOpen: integratedTap),
+      'boarding': V6BoardingHousePreview(
+        api: api, onAll: () => navigate('Data Rumah Kos')),
+      'innovation': V6InnovationPreview(
+        api: api, onAll: () => navigate('Inovasi')),
+      'activity': CikokoActivityUpdates2614(
+        role: role, navigate: navigate),
+      'shortcuts': Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const V6Section(title: 'Informasi & Kegiatan'),
+          Wrap(spacing: 7, runSpacing: 7, children: [
+            for (final item in const [
+              ('Agenda', Icons.event_outlined, 'Agenda'),
+              ('Galeri', Icons.photo_library_outlined, 'Galeri'),
+              ('Profil Wilayah', Icons.place_outlined, 'Profil Wilayah')
+            ])
+              ActionChip(
+                label: Text(item.$1,
+                  style: const TextStyle(fontSize: 10.5)),
+                avatar: Icon(item.$2, color: V6.blue, size: 16),
+                onPressed: () => navigate(item.$3)),
+          ]),
+        ],
+      ),
+      'reviews': CikokoReviewSummary(
+        api: api, onAll: () => navigate('Ulasan Aplikasi')),
+    },
+  );
  }
+
 }
 
 class V6AdminHome extends StatelessWidget {
