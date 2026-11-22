@@ -237,49 +237,161 @@ const $=id=>document.getElementById(id);
 let selected=null,dirty=false;
 const selectionKey=(type,id)=>type+':'+id;
 function persist(){dirty=true}
+function element(tag,cls,text){
+  const node=document.createElement(tag);
+  if(cls)node.className=cls;
+  if(text!==undefined)node.textContent=text;
+  return node;
+}
+function sectionPreview(div,item){
+  if(item.id==='hero'){
+    const hero=element('div','preview-hero');
+    hero.append(element('div','sun'),element('div','skyline','▥ ▥ ▥ ▥ ▥'));
+    const copy=element('div','hero-copy');
+    copy.append(element('h3','', 'Kelurahan Cikoko'),
+                element('p','', 'Kecamatan Pancoran · Jakarta Selatan'));
+    hero.append(copy);div.append(hero);return;
+  }
+  div.append(element('h3','',item.title));
+  if(item.id==='bank_annual'){
+    const amount=element('div','preview-total');
+    amount.append(element('span','','♻  2.930,78 Kg'),
+                  element('span','','|'),
+                  element('span','','Rp 7.473.660'));
+    div.append(amount,element('div','preview-sub','1.048 catatan · Ilustrasi 2026'));return;
+  }
+  if(item.id==='letters'){
+    const metrics=element('div','preview-status');
+    for(const [value,title] of [['0','Surat Masuk'],['0','Diproses'],['30','Selesai']]){
+      const cell=element('span','',value);cell.append(element('small','',title));metrics.append(cell);
+    }
+    div.append(metrics);return;
+  }
+  if(item.id==='integrated_services'){
+    const grid=element('div','preview-services');
+    for(const [icon,name] of [['▦','PTSP'],['▣','Dukcapil'],['♧','Alpukat Betawi']]){
+      const cell=element('span');cell.append(element('b','',icon),document.createTextNode(name));grid.append(cell);
+    }
+    div.append(grid);return;
+  }
+  if(item.id==='news'){
+    div.append(element('div','preview-meta','Berita terbaru • Foto, tanggal dan judul'));
+  }else if(item.id==='announcement'){
+    div.append(element('div','preview-meta','TANGGAL   •   WAKTU   •   KEGIATAN'));
+  }else if(item.id==='innovation'){
+    div.append(element('div','preview-meta','Foto inovasi · Judul · Deskripsi'));
+  }else if(item.id==='activity'){
+    div.append(element('div','preview-activity','✓ Kegiatan Jumantik · Bank Sampah'));
+  }else if(item.id==='reviews'){
+    div.append(element('div','preview-meta','Ulasan dan penilaian layanan'));
+  }else if(item.id==='boarding'){
+    div.append(element('div','preview-meta','Data rumah kos terverifikasi'));
+  }else if(item.id==='shortcuts'){
+    div.append(element('div','preview-meta','Agenda • Galeri • Profil Wilayah'));
+  }
+}
+function reorder(kind,sourceId,targetId){
+  if(kind!=='section'&&kind!=='block')return;
+  const list=kind==='section'?model.sections:model.blocks;
+  if(!Array.isArray(list)||sourceId===targetId)return;
+  const from=list.findIndex(x=>(kind==='section'?x.key:x.id)===sourceId);
+  const to=list.findIndex(x=>(kind==='section'?x.key:x.id)===targetId);
+  if(from<0||to<0)return;
+  list.splice(to,0,list.splice(from,1)[0]);
+  persist();render();
+}
+function renderLayerList(items){
+  const list=$('layerList');
+  if(!list)return;
+  list.replaceChildren();
+  if(!items.length){
+    list.append(element('p','helper','Tambahkan komponen dari pustaka untuk mulai mendesain halaman.'));
+    return;
+  }
+  for(const [index,item] of items.entries()){
+    const layer=element('div','layer'+(selected===selectionKey(item.kind,item.id)?' selected':'')+(item.visible?'':' hidden-layer'));
+    layer.draggable=true;
+    const grip=element('span','layer-grip','⠿');
+    const name=element('button','layer-title',item.title||('Komponen '+item.type));
+    name.type='button';name.onclick=()=>choose(item.kind,item.id);
+    const moves=element('div','layer-move');
+    const up=element('button','','↑');const down=element('button','','↓');
+    up.type='button';down.type='button';
+    up.setAttribute('aria-label','Naikkan '+(item.title||item.id));
+    down.setAttribute('aria-label','Turunkan '+(item.title||item.id));
+    up.disabled=index===0||items[index-1]?.kind!==item.kind;
+    down.disabled=index===items.length-1||items[index+1]?.kind!==item.kind;
+    up.onclick=()=>{
+      if(index>0&&items[index-1].kind===item.kind)reorder(item.kind,item.id,items[index-1].id);
+    };
+    down.onclick=()=>{
+      if(index+1<items.length&&items[index+1].kind===item.kind)reorder(item.kind,item.id,items[index+1].id);
+    };
+    moves.append(up,down);
+    layer.append(grip,name,moves);
+    layer.ondragstart=e=>{
+      e.dataTransfer.setData('text/plain',selectionKey(item.kind,item.id));
+      e.dataTransfer.effectAllowed='move';
+    };
+    layer.ondragover=e=>e.preventDefault();
+    layer.ondrop=e=>{
+      e.preventDefault();
+      const [kind,id]=(e.dataTransfer.getData('text/plain')||'').split(':');
+      if(kind===item.kind)reorder(kind,id,item.id);
+    };
+    list.append(layer);
+  }
+}
 function render(){
   body.replaceChildren();
-  if(model.title){const node=document.createElement('h2');node.textContent=model.title;node.style.margin='0';node.style.color=model.accent;body.append(node);}
-  if(model.description){const node=document.createElement('p');node.textContent=model.description;node.style.whiteSpace='pre-wrap';node.style.color='#61748b';body.append(node);}
+  if(model.title){
+    const node=element('h2','',model.title);
+    node.style.margin='0';node.style.color=model.accent;
+    body.append(node);
+  }
+  if(model.description){
+    const node=element('p','',model.description);
+    node.style.whiteSpace='pre-wrap';
+    node.style.color='#61748b';
+    body.append(node);
+  }
   const ordered=[];
-  if(selectedPage==='Dashboard')for(const section of model.sections||[]){
-    ordered.push({kind:'section',id:section.key,visible:section.visible, title:labels[section.key]||section.key});
+  if(selectedPage==='Dashboard'){
+    for(const section of model.sections||[])
+      ordered.push({kind:'section',id:section.key,visible:section.visible,title:labels[section.key]||section.key});
+  }else{
+    const note=element('p','preview-meta','Pratinjau komponen tambahan · Fungsi dan formulir utama tetap menggunakan Flutter native.');
+    body.append(note);
   }
   for(const block of model.blocks||[])ordered.push({kind:'block',...block});
-  const hint=document.createElement('div');hint.className='section-label';hint.textContent=selectedPage==='Dashboard'?'Seret untuk mengatur urutan Beranda':'Komponen tambahan pada halaman ini';body.append(hint);
+  renderLayerList(ordered);
   for(const item of ordered){
-    const div=document.createElement('div');
-    const id=selectionKey(item.kind,item.id);
-    div.className='app-item'+(selected===id?' selected':'')+(item.visible?'':' hidden')+((item.id==='hero')?' is-banner':'')+(item.type==='spacer'?' is-spacer':'');
-    div.dataset.kind=item.kind;div.dataset.id=item.id;div.draggable=true;div.tabIndex=0;div.setAttribute('role','button');
-    const grip=document.createElement('span');grip.textContent='⠿';grip.className='drag';div.append(grip);
-    const h=document.createElement('h3');h.textContent=item.title||('Komponen '+item.type);div.append(h);
+    const div=element('div','app-item'+(selected===selectionKey(item.kind,item.id)?' selected':'')+
+      (item.visible?'':' hidden')+(item.id==='hero'?' is-banner':'')+
+      (item.type==='spacer'?' is-spacer':''));
+    div.dataset.kind=item.kind;div.dataset.id=item.id;
+    div.draggable=true;div.tabIndex=0;div.setAttribute('role','button');
     if(item.kind==='block'){
-      if(item.body){const p=document.createElement('p');p.textContent=item.body;div.append(p);}
-      if(item.type==='spacer'){h.textContent='Jarak / Spacer';div.style.height=(item.height||16)+'px';}
-    }else if(item.id==='bank_annual'){
-      const ex=document.createElement('div');ex.className='example';ex.textContent='2.930,78 Kg  |  Rp 7.473.660';div.append(ex);
-      const p=document.createElement('p');p.textContent='Data ilustrasi, bukan data server';div.append(p);
-    }else if(item.id==='letters'){
-      const p=document.createElement('p');p.textContent='Surat Masuk  •  Diproses  •  Selesai';div.append(p);
-    }else if(item.id==='hero'){
-      const p=document.createElement('p');p.textContent='Kelurahan Cikoko · Kecamatan Pancoran';div.append(p);
+      const grip=element('span','drag','⠿');div.append(grip);
+      div.append(element('h3','',item.type==='spacer'?'Jarak / Spacer':item.title||('Komponen '+item.type)));
+      if(item.body)div.append(element('p','',item.body));
+      if(item.type==='spacer')div.style.minHeight=Math.max(8,Math.min(100,Number(item.height)||16))+'px';
+    }else{
+      if(item.id!=='hero')div.append(element('span','drag','⠿'));
+      sectionPreview(div,item);
     }
-    div.addEventListener('click',()=>choose(item.kind,item.id));
-    div.addEventListener('keydown',e=>{if(e.key==='Enter')choose(item.kind,item.id)});
-    div.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',id);e.dataTransfer.effectAllowed='move'});
-    div.addEventListener('dragover',e=>e.preventDefault());
-    div.addEventListener('drop',e=>{
+    div.onclick=()=>choose(item.kind,item.id);
+    div.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose(item.kind,item.id)}};
+    div.ondragstart=e=>{
+      e.dataTransfer.setData('text/plain',selectionKey(item.kind,item.id));
+      e.dataTransfer.effectAllowed='move';
+    };
+    div.ondragover=e=>e.preventDefault();
+    div.ondrop=e=>{
       e.preventDefault();
-      const [sourceKind,sourceId]=(e.dataTransfer.getData('text/plain')||'').split(':');
-      if(sourceKind!==item.kind||sourceId===item.id)return;
-      const list=sourceKind==='section'?model.sections:model.blocks;
-      const from=list.findIndex(x=>(sourceKind==='section'?x.key:x.id)===sourceId);
-      const to=list.findIndex(x=>(sourceKind==='section'?x.key:x.id)===item.id);
-      if(from<0||to<0)return;
-      list.splice(to,0,list.splice(from,1)[0]);
-      persist();render();
-    });
+      const [kind,id]=(e.dataTransfer.getData('text/plain')||'').split(':');
+      if(kind===item.kind)reorder(kind,id,item.id);
+    };
     body.append(div);
   }
 }
