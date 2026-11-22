@@ -295,6 +295,67 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  designer-visual-hotfix-2620:
+    name: Tampilan editor sesuai mockup - patch website aman
+    needs: verify
+    if: github.event_name == 'pull_request' && github.head_ref == 'feat/editor-desain-aplikasi-2620' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Uji sintaks PHP dan JavaScript editor
+        run: |
+          set -euo pipefail
+          php -l cpanel/editor-aplikasi.php
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          src=Path('cpanel/editor-aplikasi.php').read_text()
+          scripts=re.findall(r'<script>(.*?)</script>',src,re.S)
+          assert len(scripts)==1, 'Expected one in-page script'
+          safe=re.sub(r'<\?=.*?\?>', '"Dashboard"',scripts[0],flags=re.S)
+          Path('/tmp/cikoko-editor-2620.js').write_text(safe)
+          for ref in ['appBody','layerList','itemTitle','pageSelect','saveForm','saveAction']:
+              assert f'id="{ref}"' in src, ref+' is missing'
+          PY
+          node --check /tmp/cikoko-editor-2620.js
+      - name: Hanya dua file tampilan (tanpa .htaccess / API / DB)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p visual-patch/assets
+          cp cpanel/editor-aplikasi.php visual-patch/editor-aplikasi.php
+          cp cpanel/assets/editor-mockup-2620.css visual-patch/assets/editor-mockup-2620.css
+          chmod 644 visual-patch/editor-aplikasi.php visual-patch/assets/editor-mockup-2620.css
+          cat > visual-patch/PANDUAN-PATCH-MOCKUP.txt <<'INSTRUCTIONS'
+          CIKOKO SMART - PATCH TAMPILAN EDITOR 2620
+          Berasal dari source editor 2620. Hanya memperbaiki UI editor website,
+          BUKAN seluruh fitur editor Canva dan bukan pembaruan APK Android.
+
+          LANGKAH AMAN:
+          1. Backup public_html/editor-aplikasi.php yang saat ini sudah berfungsi.
+          2. Pastikan akun Admin Utama dan fitur draft/publikasi tetap bekerja.
+          3. Ekstrak isi ZIP ini LANGSUNG ke public_html:
+             - public_html/editor-aplikasi.php
+             - public_html/assets/editor-mockup-2620.css
+          4. Izinkan overwrite hanya editor-aplikasi.php, lalu cek file mode 0644.
+          5. Jangan sentuh .htaccess, site-v3/router.php, mobile-api/, data/, database.
+          6. Muat ulang editor dengan Ctrl+F5 dan uji Simpan Draft.
+          7. Angka pratinjau adalah ilustrasi, bukan data asli aplikasi.
+          8. Jika timbul masalah, pulihkan file editor-aplikasi.php yang dibackup.
+
+          Masih tahap awal: belum bebas-piksel, upload media, resize komponen
+          native secara penuh, atau kustomisasi semua kolom/form aplikasi.
+          INSTRUCTIONS
+          chmod 644 visual-patch/PANDUAN-PATCH-MOCKUP.txt
+          (cd visual-patch && zip -qr "$GITHUB_WORKSPACE/CIKOKO_EDITOR_MOCKUP_2620_UI_ONLY.zip" .)
+      - name: Publikasikan ZIP editor UI only
+        uses: actions/upload-artifact@v4
+        with:
+          name: CikokoSmart-2620-Editor-Mockup-UI-ONLY
+          path: CIKOKO_EDITOR_MOCKUP_2620_UI_ONLY.zip
+          if-no-files-found: error
+          retention-days: 30
+
   server-patch:
     name: Paket pembaruan cPanel tanpa konfigurasi privat
     needs: verify
