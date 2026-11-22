@@ -281,6 +281,7 @@ document.querySelectorAll('[data-add]').forEach(btn=>btn.onclick=()=>{
 document.querySelectorAll('[data-submit]').forEach(btn=>btn.onclick=()=>{
  $('layoutJson').value=JSON.stringify(model);$('saveAction').value=btn.dataset.submit;
  if(btn.dataset.submit==='publish'&&!confirm('Terbitkan desain? Perubahan akan terlihat di aplikasi yang mendukung layout 2620.'))return;
+ dirty=false;
  $('saveForm').submit();
 });
 $('pageSelect').onchange=e=>{
