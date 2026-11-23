@@ -221,6 +221,15 @@ function pjlp_mobile_dispatch(string $action,string $method,?array $trustedWebsi
    if((string)($p['id']??'')===$person&&($p['active']??false)&&in_array($p['role']??'', ['lurah','asn','admin_kelurahan'],true))$allowed=true;
   }
   if(!$allowed)pjlp_fail('Akun pejabat tidak aktif atau tidak berwenang');
+  $oldPerson=mobile_text($body['previous_user_id']??'',80);
+  if($oldPerson!==''&&$oldPerson!==$person){
+   $old=pjlp_valid_official($db,$oldPerson);
+   if(!$old)pjlp_fail('Profil pejabat asal tidak ditemukan',404);
+   if(pjlp_valid_official($db,$person))pjlp_fail('Akun tujuan sudah mempunyai profil pejabat. Pilih akun lain.',409);
+   // Transfer the profile row, retaining public_token, QR and signatures.
+   $db->prepare('UPDATE pjlp_officials SET user_id=? WHERE user_id=?')->execute([$person,$oldPerson]);
+   pjlp_audit($db,null,$uid,'official_account_relinked',['from'=>$oldPerson,'to'=>$person]);
+  }
   $previous=pjlp_valid_official($db,$person);
   $token=(string)($previous['public_token']??'');
   if(!preg_match('/^[a-f0-9]{48}$/D',$token))$token=bin2hex(random_bytes(24));
