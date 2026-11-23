@@ -130,22 +130,37 @@ function pjlp_pdf_build(PDO $db,array $r,bool $draft=false):string {
  $center(442,357,pjlp_pdf_safe((string)$r['full_name'],37),8);
  $center(442,344,'ID PHL '.(string)$r['id_phl'],8);
 
- // VI. Supervisor decision & permanent QR.
- $header(322,195,'VI. PERTIMBANGAN ATASAN LANGSUNG');
+ // VI. Kasi Ekonomi & Pembangunan: show standard decision columns.
+ // No Kasi decision is recorded in the current one-stage Lurah approval flow,
+ // therefore never forge a Kasi checkmark.
+ $header(322,195,'VI. PERTIMBANGAN KASI EKONOMI DAN PEMBANGUNAN');
  $ln(331,195,331,308);$ln(42,294,331,294);$ln(42,280,331,280);
  $ln(138,280,138,308);$ln(234,280,234,308);
  $center(90,298,'DISETUJUI',6.5);$center(186,298,'PERUBAHAN',6.5);$center(282,298,'DITANGGUHKAN',6.5);
- $field(48,270,'QR Kasi: identitas pejabat, bukan persetujuan');
+ $field(48,270,'Keputusan Kasi: belum tercatat');
  $center(442,298,pjlp_pdf_safe((string)$super['title'],42),7.2);
  $center(442,215,pjlp_pdf_safe((string)$super['full_name'],38),7.6);
  $center(442,202,'NIP '.(string)$super['nip'],7.4);
 
- // VII. Lurah final decision & permanent QR.
+ // VII. Lurah decision: tick ONLY the actual persisted Lurah decision.
  $header(188,38,'VII. KEPUTUSAN PEJABAT YANG BERWENANG MEMBERIKAN CUTI');
  $ln(331,38,331,174);$ln(42,160,331,160);$ln(42,146,331,146);
  $ln(138,146,138,174);$ln(234,146,234,174);
  $center(90,164,'DISETUJUI',6.5);$center(186,164,'PERUBAHAN',6.5);$center(282,164,'DITANGGUHKAN',6.5);
- if(!$draft)$tick(88,154);$field(48,136,$draft?'Menunggu keputusan Lurah':'Disetujui oleh Lurah');
+ $lurahDecision='';
+ $lurahReason='';
+ foreach($approvals as $approval){
+  if((string)($approval['stage']??'')!=='lurah')continue;
+  $lurahDecision=(string)($approval['decision']??'');
+  $lurahReason=(string)($approval['reason']??'');
+ }
+ // Draft previews must remain unsigned even if an earlier decision exists.
+ if(!$draft){
+  if($lurahDecision==='approve')$tick(88,154);
+  elseif($lurahDecision==='revision')$tick(184,154);
+  elseif($lurahDecision==='defer')$tick(280,154);
+ }
+ $field(48,136,$draft?'Menunggu keputusan Lurah':('Alasan: '.($lurahReason!==''?$lurahReason:'-')),51);
  $center(442,165,pjlp_pdf_safe((string)$lurah['title'],42),7.5);
  $center(442,60,pjlp_pdf_safe((string)$lurah['full_name'],38),7.6);
  $center(442,47,'NIP '.(string)$lurah['nip'],7.4);
