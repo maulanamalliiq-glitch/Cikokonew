@@ -258,6 +258,96 @@ jobs:
         run: rm -f "$CIKOKO_KEYSTORE_PATH"
 
 
+  apk-2622:
+    name: Build APK ARM64 + AAB Cuti Lurah Bank Sampah 2622 (tanpa publikasi otomatis)
+    needs: verify
+    if: github.event_name == 'pull_request' && github.head_ref == 'feat/cikoko-2622-bank-sampah-lurah-fixes' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      CIKOKO_KEYSTORE_PATH: ${{ github.workspace }}/flutter/android/cikoko_upload.jks
+      CIKOKO_STORE_PASSWORD: ${{ secrets.CIKOKO_STORE_PASSWORD }}
+      CIKOKO_KEY_PASSWORD: ${{ secrets.CIKOKO_KEY_PASSWORD }}
+      CIKOKO_KEY_ALIAS: androidkey
+      EXPECTED_CERT: 394633E6A2F4C91C150D81B228908562D230D763031A0A0C205618B9D669D4E5
+      RELEASE_NAME: 2.6.22
+      RELEASE_CODE: '2622'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Periksa keystore lama untuk APK uji
+        env:
+          CIKOKO_KEYSTORE_B64: ${{ secrets.CIKOKO_KEYSTORE_B64 }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$CIKOKO_KEYSTORE_B64" || -z "$CIKOKO_STORE_PASSWORD" || -z "$CIKOKO_KEY_PASSWORD" ]]; then
+            echo '::error::Signing secrets lama belum tersedia di GitHub Actions. Tidak membuat keystore baru.'
+            exit 1
+          fi
+          umask 077
+          mkdir -p "$(dirname "$CIKOKO_KEYSTORE_PATH")"
+          printf '%s' "$CIKOKO_KEYSTORE_B64" | base64 --decode > "$CIKOKO_KEYSTORE_PATH"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Verifikasi sertifikat lama
+        run: |
+          set -euo pipefail
+          actual=$(keytool -list -v -keystore "$CIKOKO_KEYSTORE_PATH" -storepass:env CIKOKO_STORE_PASSWORD -alias "$CIKOKO_KEY_ALIAS" | sed -n 's/^[[:space:]]*SHA256: //p' | tr -d '[:space:]:' | tr '[:lower:]' '[:upper:]')
+          test "$actual" = "$EXPECTED_CERT" || { echo '::error::Sertifikat signing bukan keystore asli Cikoko'; exit 1; }
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.5'
+          channel: stable
+          cache: true
+      - name: Validasi versi final aplikasi 2622
+        run: |
+          set -euo pipefail
+          python3 scripts/set_build_version.py
+          cd flutter
+          flutter create --platforms=android --project-name=cikoko .
+          flutter pub get
+          cd ..
+          python3 scripts/check_identity.py
+      - name: Build dan verifikasi AAB Play Store signed
+        working-directory: flutter
+        run: |
+          set -euo pipefail
+          flutter build appbundle --release
+          aab=build/app/outputs/bundle/release/app-release.aab
+          test -s "$aab"
+          jarsigner -verify "$aab" > "$RUNNER_TEMP/final-aab-check.txt" 2>&1
+          grep -q 'jar verified' "$RUNNER_TEMP/final-aab-check.txt"
+          actual=$(keytool -printcert -jarfile "$aab" | sed -n 's/^[[:space:]]*SHA256: //p' | tr -d '[:space:]:' | tr '[:lower:]' '[:upper:]')
+          test "$actual" = "$EXPECTED_CERT" || { echo '::error::AAB tidak cocok dengan keystore lama Cikoko'; exit 1; }
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          cp "$aab" "$GITHUB_WORKSPACE/dist/CikokoSmart-FINAL-v$RELEASE_NAME-$RELEASE_CODE-PLAY.aab"
+      - name: Build dan verifikasi APK ARM64 signed
+        working-directory: flutter
+        run: |
+          set -euo pipefail
+          flutter build apk --release --split-per-abi --target-platform android-arm64
+          apk=build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          test -s "$apk"
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          signed="$GITHUB_WORKSPACE/dist/CikokoSmart-FINAL-v$RELEASE_NAME-$RELEASE_CODE-arm64.apk"
+          apksigner="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner"
+          "$apksigner" sign --ks "$CIKOKO_KEYSTORE_PATH" --ks-key-alias "$CIKOKO_KEY_ALIAS" --ks-pass env:CIKOKO_STORE_PASSWORD --key-pass env:CIKOKO_KEY_PASSWORD --out "$signed" "$apk"
+          "$apksigner" verify --verbose --print-certs "$signed" > "$RUNNER_TEMP/pppk-apk-signature.txt"
+          actual=$(grep -iE 'certificate.*SHA.?256' "$RUNNER_TEMP/pppk-apk-signature.txt" | grep -oiE '[0-9a-f]{64}|([0-9a-f]{2}:){31}[0-9a-f]{2}' | head -n1 | tr -d ':' | tr '[:lower:]' '[:upper:]')
+          test "$actual" = "$EXPECTED_CERT" || { echo '::error::APK tidak cocok dengan sertifikat lama'; exit 1; }
+      - name: Upload APK FINAL dan AAB (tanpa rilis Play Store)
+        uses: actions/upload-artifact@v4
+        with:
+          name: CikokoSmart-FINAL-2622-APK-AAB
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Bersihkan keystore sementara
+        if: always()
+        run: rm -f "$CIKOKO_KEYSTORE_PATH"
+
+
   designer-patch-2620:
     name: Paket editor desain Cikoko Smart 2620 untuk cPanel
     needs: verify
