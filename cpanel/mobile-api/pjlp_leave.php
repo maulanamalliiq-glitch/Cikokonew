@@ -246,8 +246,8 @@ function pjlp_mobile_dispatch(string $action,string $method,?array $trustedWebsi
   if((int)$used->fetchColumn()>0)pjlp_fail('Profil pejabat masih digunakan sebagai atasan PJLP. Ubah penugasan terlebih dahulu.',409);
   // Historical PDF QR references must remain verifiable: approved letters cannot lose their official.
   $approved=$db->query("SELECT COUNT(*) FROM pjlp_leave_requests WHERE status='approved'")->fetchColumn();
-  if((int)$approved>0&&preg_match('/lurah/i',(string)$previous['title']))
-   pjlp_fail('Profil Lurah tidak boleh dihapus selama ada surat cuti disetujui. Gunakan Edit.',409);
+  if((int)$approved>0)
+   pjlp_fail('Penghapusan profil pejabat diblokir karena ada surat cuti disetujui yang perlu mempertahankan identitas QR. Gunakan Edit.',409);
   $db->prepare('DELETE FROM pjlp_officials WHERE user_id=?')->execute([$person]);
   pjlp_audit($db,null,$uid,'official_profile_deleted',['user_id'=>$person]);
   mobile_json(['ok'=>true]);
