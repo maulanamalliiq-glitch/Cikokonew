@@ -139,17 +139,17 @@ class _LeaveState extends State<CikokoPpsuLeaveHub> {
   ));
   year.dispose();allowance.dispose();
  }
- Future<void> officialEditor()async{
+ Future<void> officialEditor([Map<String,dynamic>? existing])async{
   final people=[...(adminData['supervisors'] as List<dynamic>? ?? []),...(adminData['lurah'] as List<dynamic>? ?? [])];
-  String? person;XFile? photo;XFile? signature;
-  final name=TextEditingController(),title=TextEditingController(),nip=TextEditingController(),unit=TextEditingController(text:'Kelurahan Cikoko');
+  String? person=existing?['user_id']?.toString();XFile? photo;XFile? signature;
+  final name=TextEditingController(text:existing?['full_name']?.toString()??''),title=TextEditingController(text:existing?['title']?.toString()??''),nip=TextEditingController(text:existing?['nip']?.toString()??''),unit=TextEditingController(text:existing?['work_unit']?.toString()??'Kelurahan Cikoko');
   await showDialog<void>(context:context,builder:(dialog)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
    title:const materialText.Text('Profil Pimpinan & QR Unik'),
    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    DropdownButtonFormField<String>(isExpanded:true,decoration:const InputDecoration(labelText:'Akun pejabat'),
+    DropdownButtonFormField<String>(value:person,isExpanded:true,decoration:const InputDecoration(labelText:'Akun pejabat'),
      items:people.map((e)=>DropdownMenuItem<String>(value:e['user_id'].toString(),
       child:materialText.Text(e['name'].toString()+' ('+e['role'].toString()+')'))).toList(),
-     onChanged:(v)=>update(()=>person=v)),
+     onChanged:existing!=null?null:(v)=>update(()=>person=v)),
     TextField(controller:name,decoration:const InputDecoration(labelText:'Nama pejabat')),
     TextField(controller:title,decoration:const InputDecoration(labelText:'Jabatan pada surat')),
     TextField(controller:nip,decoration:const InputDecoration(labelText:'NIP')),
@@ -275,6 +275,21 @@ class _LeaveState extends State<CikokoPpsuLeaveHub> {
    await Printing.layoutPdf(name:'Cuti-PPSU-'+r['id'].toString()+'.pdf',onLayout:(_)=>response.bodyBytes);
   }catch(e){toast(e);}
  }
+ Future<void> deleteOfficial(Map<String,dynamic> item)async{
+  final person=item['user_id']?.toString()??'';
+  if(person.isEmpty)return;
+  final confirmed=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+   title:const materialText.Text('Hapus Profil Pejabat?'),
+   content:materialText.Text('Profil '+(item['full_name']?.toString()??'')+' akan dihapus dari database jika belum digunakan oleh surat resmi. Akun login tidak akan dihapus.'),
+   actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const materialText.Text('Batal')),
+    TextButton(onPressed:()=>Navigator.pop(ctx,true),child:const materialText.Text('Hapus Profil'))],
+  ));
+  if(confirmed!=true||!mounted)return;
+  try{
+   await widget.api.call('pjlp_official_delete',method:'POST',body:{'user_id':person,'confirm':'HAPUS'});
+   toast('Profil pejabat dihapus');await reload();
+  }catch(e){toast(e);}
+ }
  Widget employeePanel(){
   final e=profile['employee'] as Map<String,dynamic>?;
   final b=profile['balance'] as Map<String,dynamic>?;
@@ -326,6 +341,10 @@ class _LeaveState extends State<CikokoPpsuLeaveHub> {
      crossAxisAlignment:CrossAxisAlignment.start,children:[
       materialText.Text(raw['full_name'].toString(),style:const TextStyle(fontWeight:FontWeight.bold)),
       materialText.Text(raw['title'].toString()+' · '+raw['nip'].toString()),
+      Row(children:[
+       TextButton.icon(onPressed:()=>officialEditor(Map<String,dynamic>.from(raw as Map)),icon:const Icon(Icons.edit),label:const materialText.Text('Edit')),
+       TextButton.icon(onPressed:()=>deleteOfficial(Map<String,dynamic>.from(raw as Map)),icon:const Icon(Icons.delete_outline),label:const materialText.Text('Hapus')),
+      ]),
       if(raw['public_token']!=null&&raw['public_token'].toString().isNotEmpty)...[
        Center(child:QrImageView(
         data:'https://datawebs.my.id/mobile-api/pjlp_profile.php?id='+raw['public_token'].toString(),
