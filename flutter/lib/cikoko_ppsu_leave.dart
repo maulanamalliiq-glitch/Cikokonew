@@ -256,12 +256,14 @@ class _LeaveState extends State<CikokoPpsuLeaveHub> {
    if(!mounted)return;
    await Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>Scaffold(
     appBar:AppBar(title:materialText.Text('Pratinjau Cuti #'+r['id'].toString())),
-    body:PdfPreview(
+    body:InteractiveViewer(
+     minScale:1,maxScale:5,boundaryMargin:const EdgeInsets.all(120),
+     child:PdfPreview(
      build:(_)=>response.bodyBytes,
      allowPrinting:false,allowSharing:false,
      canChangePageFormat:false,canChangeOrientation:false,
      pdfFileName:'Pratinjau-Cuti-PJLP-'+r['id'].toString()+'.pdf',
-    ),
+    )),
    )));
   }catch(e){toast(e);}
  }
