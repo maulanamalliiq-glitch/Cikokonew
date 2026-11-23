@@ -221,6 +221,15 @@ function pjlp_mobile_dispatch(string $action,string $method,?array $trustedWebsi
    if((string)($p['id']??'')===$person&&($p['active']??false)&&in_array($p['role']??'', ['lurah','asn','admin_kelurahan'],true))$allowed=true;
   }
   if(!$allowed)pjlp_fail('Akun pejabat tidak aktif atau tidak berwenang');
+  $oldPerson=mobile_text($body['previous_user_id']??'',80);
+  if($oldPerson!==''&&$oldPerson!==$person){
+   $old=pjlp_valid_official($db,$oldPerson);
+   if(!$old)pjlp_fail('Profil pejabat asal tidak ditemukan',404);
+   if(pjlp_valid_official($db,$person))pjlp_fail('Akun tujuan sudah mempunyai profil pejabat. Pilih akun lain.',409);
+   // Transfer the profile row, retaining public_token, QR and signatures.
+   $db->prepare('UPDATE pjlp_officials SET user_id=? WHERE user_id=?')->execute([$person,$oldPerson]);
+   pjlp_audit($db,null,$uid,'official_account_relinked',['from'=>$oldPerson,'to'=>$person]);
+  }
   $previous=pjlp_valid_official($db,$person);
   $token=(string)($previous['public_token']??'');
   if(!preg_match('/^[a-f0-9]{48}$/D',$token))$token=bin2hex(random_bytes(24));
@@ -233,6 +242,24 @@ function pjlp_mobile_dispatch(string $action,string $method,?array $trustedWebsi
   $st->execute([$person,$name,$title,$nip,$qr,$token,$photo,$unit,$public?1:0]);
   pjlp_audit($db,null,$uid,'official_profile_saved',['user_id'=>$person,'photo_updated'=>$encoded!=='','public'=>$public]);
   mobile_json(['ok'=>true,'profile_url'=>'https://datawebs.my.id/mobile-api/pjlp_profile.php?id='.$token]);
+ }
+ if($action==='pjlp_official_delete'&&$method==='POST'){
+  if(!$admin)pjlp_fail('Akses admin diperlukan',403);
+  $b=mobile_body();$person=mobile_text($b['user_id']??'',80);
+  if($person===''||($b['confirm']??'')!=='HAPUS')pjlp_fail('Konfirmasi hapus tidak valid',422);
+  $previous=pjlp_valid_official($db,$person);
+  if(!$previous)pjlp_fail('Profil pejabat tidak ditemukan',404);
+  // Preserve officials referenced by employee leave assignments or historical letters.
+  $used=$db->prepare('SELECT COUNT(*) FROM pjlp_employees WHERE supervisor_user_id=?');
+  $used->execute([$person]);
+  if((int)$used->fetchColumn()>0)pjlp_fail('Profil pejabat masih digunakan sebagai atasan PJLP. Ubah penugasan terlebih dahulu.',409);
+  // Historical PDF QR references must remain verifiable: approved letters cannot lose their official.
+  $approved=$db->query("SELECT COUNT(*) FROM pjlp_leave_requests WHERE status='approved'")->fetchColumn();
+  if((int)$approved>0)
+   pjlp_fail('Penghapusan profil pejabat diblokir karena ada surat cuti disetujui yang perlu mempertahankan identitas QR. Gunakan Edit.',409);
+  $db->prepare('DELETE FROM pjlp_officials WHERE user_id=?')->execute([$person]);
+  pjlp_audit($db,null,$uid,'official_profile_deleted',['user_id'=>$person]);
+  mobile_json(['ok'=>true]);
  }
  if($action==='pjlp_apply'&&$method==='POST'){
   if(!in_array($role,['ppsu','pjlp'],true)||!$self)pjlp_fail('Admin harus mendaftarkan akun PPSU Anda terlebih dahulu',403);
@@ -263,25 +290,19 @@ function pjlp_mobile_dispatch(string $action,string $method,?array $trustedWebsi
    $overlap=$db->prepare("SELECT r.id,e.full_name FROM pjlp_leave_requests r JOIN pjlp_employees e ON e.id=r.employee_id WHERE r.start_date<=? AND r.end_date>=? AND r.status IN ('approved','pending_admin','pending_supervisor','pending_lurah') ORDER BY r.start_date,r.id LIMIT 1");
    $overlap->execute([$z->format('Y-m-d'),$a->format('Y-m-d')]);
    if($overlap->fetch(PDO::FETCH_ASSOC))pjlp_fail('Tanggal cuti sudah dipesan pegawai lain atau masih menunggu persetujuan. Pilih tanggal lain.',409);
-   $save=$db->prepare('INSERT INTO pjlp_leave_requests(employee_id,leave_year,start_date,end_date,requested_days,reason,leave_address,phone) VALUES(?,?,?,?,?,?,?,?)');
+   $save=$db->prepare("INSERT INTO pjlp_leave_requests(employee_id,leave_year,start_date,end_date,requested_days,reason,leave_address,phone,status) VALUES(?,?,?,?,?,?,?,?, 'pending_lurah')");
    $save->execute([(int)$self['id'],$year,$a->format('Y-m-d'),$z->format('Y-m-d'),$days,$reason,$addr,$phone]);
    $id=(int)$db->lastInsertId();
    pjlp_audit($db,$id,$uid,'submitted',['days'=>$days]);
    $db->commit();
    $db->query("SELECT RELEASE_LOCK('cikoko_pjlp_calendar_exclusive')");$calendarLock=false;
-   pjlp_notify($db,'admin','Cuti PJLP baru','Pengajuan cuti nomor '.$id.' menunggu verifikasi');
+   pjlp_notify($db,'admin','Cuti PJLP baru','Pengajuan cuti nomor '.$id.' diterima dan menunggu keputusan Lurah');
+   foreach($db->query("SELECT user_id FROM pjlp_officials WHERE LOWER(title) LIKE '%lurah%'")->fetchAll(PDO::FETCH_COLUMN) as $lurahUid)pjlp_notify($db,(string)$lurahUid,'Persetujuan cuti PJLP','Pengajuan cuti nomor '.$id.' menunggu keputusan Lurah');
    mobile_json(['ok'=>true,'id'=>$id,'requested_days'=>$days]);
   }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
   finally{if($calendarLock)$db->query("SELECT RELEASE_LOCK('cikoko_pjlp_calendar_exclusive')");}
  }
- if($action==='pjlp_number_set'&&$method==='POST'){
-  if(!$admin)pjlp_fail('Hanya admin yang dapat mengisi nomor surat',403);
-  $b=mobile_body();$id=(int)($b['request_id']??0);$number=mobile_text($b['official_number']??'',100);
-  if($id<1||!preg_match('/^[a-zA-Z0-9.\/ -]{4,100}$/D',$number))pjlp_fail('Nomor surat tidak valid');
-  $s=$db->prepare("UPDATE pjlp_leave_requests SET official_number=? WHERE id=? AND status='pending_admin'");
-  $s->execute([$number,$id]);if($s->rowCount()!==1)pjlp_fail('Nomor surat diisi sebelum persetujuan admin',409);
-  pjlp_audit($db,$id,$uid,'letter_number_set',['number'=>$number]);mobile_json(['ok'=>true]);
- }
+ if($action==='pjlp_number_set'&&$method==='POST')pjlp_fail('Nomor surat dibuat otomatis hanya setelah disetujui Lurah',403);
  if($action==='pjlp_review'&&$method==='POST'){
   $b=mobile_body();$id=(int)($b['request_id']??0);$decision=(string)($b['decision']??'');
   $reason=mobile_text($b['reason']??'',1000);
@@ -298,33 +319,27 @@ function pjlp_mobile_dispatch(string $action,string $method,?array $trustedWebsi
    if(!$r)pjlp_fail('Pengajuan tidak ditemukan',404);
    // Satu tahap: admin Kelurahan memberi keputusan langsung, tanpa antrean akun atasan/Lurah.
    // Data pejabat pada formulir adalah referensi jabatan; keputusan elektronik dicatat atas nama admin.
-   if(!$admin||!in_array((string)$r['status'],['pending_admin','pending_supervisor','pending_lurah'],true))
-    pjlp_fail('Hanya admin yang dapat memutuskan pengajuan yang masih diproses',403);
-   $stage='admin';
+   $off=pjlp_valid_official($db,$uid);
+   if($role!=='lurah'||!$off||!preg_match('/lurah/i',(string)$off['title'])||!in_array((string)$r['status'],['pending_admin','pending_supervisor','pending_lurah'],true))
+    pjlp_fail('Hanya akun Lurah terdaftar yang dapat memutuskan pengajuan yang masih diproses',403);
+   $stage='lurah';
    $next=$decision==='approve'?'approved':(['revision'=>'revision','defer'=>'deferred','reject'=>'rejected'][$decision]);
    if($next==='approved'){
-    // Admin may set/edit the official number in the same approval transaction.
-    $number=mobile_text($b['official_number']??$r['official_number']??'',100);
-    if($number===''){
-     $max=34;
-     $existing=$db->query("SELECT official_number FROM pjlp_leave_requests WHERE official_number IS NOT NULL");
-     foreach($existing->fetchAll(PDO::FETCH_COLUMN) as $oldNumber){
-      if(preg_match('~^([0-9]+)/KG 11\\.01$~D',(string)$oldNumber,$m))$max=max($max,(int)$m[1]);
-     }
-     $number=($max+1).'/KG 11.01';
+    // Nomor baru hanya boleh dihasilkan setelah keputusan Lurah; nomor lama tetap tersimpan.
+    $max=34;
+    $existing=$db->query("SELECT official_number FROM pjlp_leave_requests WHERE official_number IS NOT NULL");
+    foreach($existing->fetchAll(PDO::FETCH_COLUMN) as $oldNumber){
+     if(preg_match('~^([0-9]+)/KG[ .]11\\.01$~D',(string)$oldNumber,$m))$max=max($max,(int)$m[1]);
     }
-    if(!preg_match('/^[a-zA-Z0-9.\/ -]{4,100}$/D',$number))pjlp_fail('Nomor surat tidak valid');
-    if($number!==(string)$r['official_number']){
-     $numSt=$db->prepare('UPDATE pjlp_leave_requests SET official_number=? WHERE id=?');
-     $numSt->execute([$number,$id]);
-     pjlp_audit($db,$id,$uid,'letter_number_set',['number'=>$number]);
-     $r['official_number']=$number;
-    }
-    if(trim((string)$r['official_number'])==='')pjlp_fail('Isi nomor surat sebelum menyetujui cuti');
+    $number=($max+1).'/KG 11.01';
+    $numSt=$db->prepare('UPDATE pjlp_leave_requests SET official_number=? WHERE id=?');
+    $numSt->execute([$number,$id]);
+    pjlp_audit($db,$id,$uid,'letter_number_set',['number'=>$number,'by'=>'lurah']);
+    $r['official_number']=$number;
     $sup=pjlp_valid_official($db,(string)$r['supervisor_user_id']);
     $lurahRow=$db->query("SELECT user_id FROM pjlp_officials WHERE LOWER(title) LIKE '%lurah%' ORDER BY id LIMIT 1")->fetch(PDO::FETCH_ASSOC);
     $lurah=$lurahRow?pjlp_valid_official($db,(string)$lurahRow['user_id']):null;
-    if(!$sup||!$lurah)pjlp_fail('Admin harus melengkapi data atasan langsung dan Lurah');
+    if(!$sup||!$lurah||!preg_match('/kasi.*ekonomi.*pembangunan/i',(string)$sup['title']))pjlp_fail('Lengkapi pejabat Kasi Ekonomi & Pembangunan serta Lurah sebelum menyetujui cuti');
     // QR pejabat hanya boleh dicetak jika admin memang berwenang memakai QR tetap mereka.
     foreach([$sup,$lurah] as $off){
      if(empty($off['qr_file'])||!is_file(pjlp_private_dir('qr').'/'.$off['qr_file']))
@@ -347,14 +362,24 @@ function pjlp_mobile_dispatch(string $action,string $method,?array $trustedWebsi
     $shaSt=$db->prepare('UPDATE pjlp_leave_requests SET pdf_sha256=? WHERE id=?');$shaSt->execute([$sha,$id]);
    }
    $db->commit();
-   pjlp_notify($db,(string)$r['user_id'],'Status cuti PPSU','Pengajuan nomor '.$id.' berstatus '.$next);
-   mobile_json(['ok'=>true,'status'=>$next]);
+   pjlp_notify($db,(string)$r['user_id'],'Status cuti PJLP','Pengajuan nomor '.$id.' berstatus '.$next);
+   pjlp_notify($db,'admin','Keputusan cuti PJLP','Pengajuan nomor '.$id.' berstatus '.$next);
+   $result=['ok'=>true,'status'=>$next];
   }catch(Throwable $e){
    if($db->inTransaction())$db->rollBack();
-   if($numberLock)$db->query("SELECT RELEASE_LOCK('cikoko_pjlp_letter_number')");
    if($pdfPath!==''&&is_file($pdfPath))@unlink($pdfPath);
    throw $e;
-  }
+  }finally{if($numberLock)$db->query("SELECT RELEASE_LOCK('cikoko_pjlp_letter_number')");}
+  mobile_json($result);
+ }
+ if($action==='pjlp_preview'&&$method==='GET'){
+  $id=(int)($_GET['id']??0);$r=pjlp_request($db,$id);
+  if(!$r)pjlp_fail('Pengajuan tidak ditemukan',404);
+  if(!$admin&&$role!=='lurah')pjlp_fail('Pratinjau hanya untuk Admin dan Lurah',403);
+  require_once __DIR__.'/pjlp_leave_pdf.php';
+  $pdf=pjlp_pdf_build($db,$r,true);
+  header('Content-Type: application/pdf');header('Content-Disposition: inline; filename="Pratinjau-Cuti-PJLP-'.$id.'.pdf"');
+  header('Cache-Control: private, no-store');echo $pdf;exit;
  }
  if($action==='pjlp_pdf'&&$method==='GET'){
   $id=(int)($_GET['id']??0);$r=pjlp_request($db,$id);

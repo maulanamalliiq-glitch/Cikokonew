@@ -4,6 +4,9 @@ import 'role_catalog.dart';
 import 'cikoko_home_sections.dart';
 import 'cikoko_home_extra.dart';
 import 'cikoko_reviews.dart';
+import 'cikoko_activity_updates_2614.dart';
+import 'bank_sampah_annual_home_2618.dart';
+import 'cikoko_sdui_2620.dart';
 
 /// Single design vocabulary based on the supplied Cikoko Smart V4 16-screen showcase.
 /// Keep server values and permissions as the source of truth: no demo reports or fake service data.
@@ -116,8 +119,8 @@ class V6BottomNavigation extends StatelessWidget {
    ('Layanan',Icons.widgets_outlined,Icons.widgets_rounded),
    ('Inovasi',Icons.auto_awesome_outlined,Icons.auto_awesome_rounded),
    ('Beranda',Icons.home_outlined,Icons.home_rounded),
-   ('Chat',Icons.chat_bubble_outline_rounded,Icons.chat_bubble_rounded),
-   ('Akun',Icons.person_outline,Icons.person_rounded),
+   ('Laporan',Icons.assignment_outlined,Icons.assignment_rounded),
+   ('Profil',Icons.person_outline,Icons.person_rounded),
   ];
   return SafeArea(top:false,child:Container(
     height:70,
@@ -430,44 +433,63 @@ class V6Home extends StatelessWidget{
   required this.articleTap,required this.reload,
   this.websiteHeroUrl,this.websiteHeroFit=BoxFit.cover,
   this.websiteHeroAlignment=Alignment.center});
- @override Widget build(BuildContext context){
-  return RefreshIndicator(onRefresh:reload,child:ListView(
-   key:const Key('v6_home'),padding:const EdgeInsets.fromLTRB(14,12,14,30),
-   children:[
-    V6Hero(onServices:()=>navigate('Layanan Online'),
-      onAbout:()=>navigate('Tentang Kami'),
-      photoUrl:websiteHeroUrl,photoFit:websiteHeroFit,
-      photoAlignment:websiteHeroAlignment),
-    const SizedBox(height:12),
-     V6LetterStatusStrip(counts:letterCounts,onStatus:letterStatus),
-     const SizedBox(height:16),
-     // Public home stays compact: full service directory remains on the Layanan tab.
-    V6AnnouncementTicker(items:items,onAll:()=>navigate('Pengumuman')),
-    const SizedBox(height:12),
-    V6NewsCarousel(items:items,api:api,onOpen:articleTap,
-      onAll:()=>navigate('Berita & Kegiatan')),
-    const SizedBox(height:12),
-    V6IntegratedServiceGrid(entries:integratedServices,onOpen:integratedTap),
-    const SizedBox(height:12),
-    V6BoardingHousePreview(api:api,onAll:()=>navigate('Data Rumah Kos')),
-    const SizedBox(height:16),
-    V6InnovationPreview(api:api,onAll:()=>navigate('Inovasi')),
-    const SizedBox(height:17),
-    const V6Section(title:'Informasi & Kegiatan'),
-    Wrap(spacing:7,runSpacing:7,children:[
-      for(final item in const [
-       ('Agenda',Icons.event_outlined,'Agenda'),
-       ('Galeri',Icons.photo_library_outlined,'Galeri'),
-       ('Profil Wilayah',Icons.place_outlined,'Profil Wilayah')
-      ])ActionChip(label:Text(item.$1,style:const TextStyle(fontSize:10.5)),
-        avatar:Icon(item.$2,color:V6.blue,size:16),
-        onPressed:()=>navigate(item.$3)),
-    ]),
-    const SizedBox(height:15),
-    CikokoReviewSummary(api:api,onAll:()=>navigate('Ulasan Aplikasi')),
-   ],
-  ));
+ @override Widget build(BuildContext context) {
+  return CikokoUiHome2620(
+    onRefresh: reload,
+    defaultOrder: const [
+      'hero', 'news', 'announcement', 'bank_annual', 'letters',
+      'integrated_services', 'boarding', 'innovation',
+      'activity', 'shortcuts', 'reviews',
+    ],
+    childrenByKey: {
+      'hero': V6Hero(
+        onServices: () => navigate('Layanan Online'),
+        onAbout: () => navigate('Tentang Kami'),
+        photoUrl: websiteHeroUrl,
+        photoFit: websiteHeroFit,
+        photoAlignment: websiteHeroAlignment,
+      ),
+      'news': V6NewsCarousel(
+        items: items, api: api, onOpen: articleTap,
+        onAll: () => navigate('Berita & Kegiatan'),
+      ),
+      'announcement': V6AnnouncementTicker(
+        items: items, onAll: () => navigate('Pengumuman')),
+      'bank_annual': const BankSampahAnnualHome2618(),
+      'letters': V6LetterStatusStrip(
+        counts: letterCounts, onStatus: letterStatus),
+      'integrated_services': V6IntegratedServiceGrid(
+        entries: integratedServices, onOpen: integratedTap),
+      'boarding': V6BoardingHousePreview(
+        api: api, onAll: () => navigate('Data Rumah Kos')),
+      'innovation': V6InnovationPreview(
+        api: api, onAll: () => navigate('Inovasi')),
+      'activity': CikokoActivityUpdates2614(
+        role: role, navigate: navigate),
+      'shortcuts': Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const V6Section(title: 'Informasi & Kegiatan'),
+          Wrap(spacing: 7, runSpacing: 7, children: [
+            for (final item in const [
+              ('Agenda', Icons.event_outlined, 'Agenda'),
+              ('Galeri', Icons.photo_library_outlined, 'Galeri'),
+              ('Profil Wilayah', Icons.place_outlined, 'Profil Wilayah')
+            ])
+              ActionChip(
+                label: Text(item.$1,
+                  style: const TextStyle(fontSize: 10.5)),
+                avatar: Icon(item.$2, color: V6.blue, size: 16),
+                onPressed: () => navigate(item.$3)),
+          ]),
+        ],
+      ),
+      'reviews': CikokoReviewSummary(
+        api: api, onAll: () => navigate('Ulasan Aplikasi')),
+    },
+  );
  }
+
 }
 
 class V6AdminHome extends StatelessWidget {
@@ -488,7 +510,12 @@ class V6AdminHome extends StatelessWidget {
    required this.articleTap,required this.navigate});
  @override Widget build(BuildContext context) {
   final allowed=modules.map((m)=>m.route).toSet();
+  // Put daily Super Admin work first; keep all existing editor routes.
   const actions=[
+   ('Pusat Laporan','Laporan Terpadu',Icons.assignment_outlined),
+   ('Bank Sampah','Bank Sampah Cikoko',Icons.recycling_outlined),
+   ('Jumantik RT/RW','Verifikasi Jumantik',Icons.bug_report_outlined),
+   ('Jumantik Warga','Verifikasi Jumantik Mandiri',Icons.verified_outlined),
    ('Kelola Halaman','Kelola Semua Halaman',Icons.dashboard_customize_outlined),
    ('Verifikasi Laporan','Verifikasi Laporan',Icons.fact_check_outlined),
    ('Verifikasi Ahli Waris','Verifikasi Ahli Waris',Icons.verified_user_outlined),
@@ -526,6 +553,8 @@ class V6AdminHome extends StatelessWidget {
          color:Colors.white,size:27)),
     ])),
    const SizedBox(height:17),
+   const BankSampahAnnualHome2618(),
+   const SizedBox(height:14),
    const V6Section(title:'Ringkasan Pelayanan'),
    GridView.count(crossAxisCount:2,childAspectRatio:1.82,
     shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),
@@ -553,7 +582,8 @@ class V6AdminHome extends StatelessWidget {
     physics:const NeverScrollableScrollPhysics(),
     childAspectRatio:1.13,crossAxisSpacing:9,mainAxisSpacing:9,
     children:[
-     for(final item in actions)if(allowed.contains(item.$2))
+     for(final item in actions)
+       if(item.$2=='Laporan Terpadu'||allowed.contains(item.$2))
        Material(color:Colors.white,borderRadius:V6.radius(12),
         child:InkWell(onTap:()=>navigate(item.$2),
          child:Container(padding:const EdgeInsets.all(7),
