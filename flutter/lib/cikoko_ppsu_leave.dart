@@ -286,7 +286,7 @@ class _LeaveState extends State<CikokoPpsuLeaveHub> {
   ));
   if(confirmed!=true||!mounted)return;
   try{
-   await widget.api.call('pjlp_official_delete',method:'POST',body:{'user_id':person,'confirm':'HAPUS'});
+   await widget.api.call('pjlp_official_delete',body:{'user_id':person,'confirm':'HAPUS'});
    toast('Profil pejabat dihapus');await reload();
   }catch(e){toast(e);}
  }
