@@ -149,7 +149,7 @@ class _LeaveState extends State<CikokoPpsuLeaveHub> {
     DropdownButtonFormField<String>(value:person,isExpanded:true,decoration:const InputDecoration(labelText:'Akun pejabat'),
      items:people.map((e)=>DropdownMenuItem<String>(value:e['user_id'].toString(),
       child:materialText.Text(e['name'].toString()+' ('+e['role'].toString()+')'))).toList(),
-     onChanged:existing!=null?null:(v)=>update(()=>person=v)),
+     onChanged:(v)=>update(()=>person=v)),
     TextField(controller:name,decoration:const InputDecoration(labelText:'Nama pejabat')),
     TextField(controller:title,decoration:const InputDecoration(labelText:'Jabatan pada surat')),
     TextField(controller:nip,decoration:const InputDecoration(labelText:'NIP')),
@@ -188,7 +188,7 @@ class _LeaveState extends State<CikokoPpsuLeaveHub> {
       signatureEncoded=base64Encode(bytes);
      }
      await post(dialog,'pjlp_official_save',{
-      'user_id':person,'full_name':name.text,'title':title.text,'nip':nip.text,'work_unit':unit.text,'photo_base64':encoded,'signature_base64':signatureEncoded,'is_public':true
+      'user_id':person,'previous_user_id':existing?['user_id'],'full_name':name.text,'title':title.text,'nip':nip.text,'work_unit':unit.text,'photo_base64':encoded,'signature_base64':signatureEncoded,'is_public':true
      });
     },child:const materialText.Text('Simpan'))],
   )));
