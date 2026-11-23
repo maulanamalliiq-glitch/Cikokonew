@@ -3,7 +3,7 @@ import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/material.dart' as materialText show Text;
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'package:printing/printing.dart' show Printing;
+import 'package:printing/printing.dart' show Printing, PdfPreview;
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'api.dart';
@@ -21,6 +21,7 @@ class _LeaveState extends State<CikokoPpsuLeaveHub> {
  List<dynamic> requests=[],officials=[];
  bool get admin=>widget.role=='admin'||widget.role=='admin_kelurahan';
  bool get ppsu=>widget.role=='ppsu'||widget.role=='pjlp';
+ bool get lurah=>widget.role=='lurah';
  String get userId=>(widget.api.profile?['id']??'').toString();
  @override void initState(){super.initState();reload();}
  Future<void> reload()async{
@@ -70,7 +71,7 @@ class _LeaveState extends State<CikokoPpsuLeaveHub> {
       }
      }),
     if(calendarWarning!=null)Padding(padding:const EdgeInsets.symmetric(vertical:6),child:materialText.Text(calendarWarning!,style:const TextStyle(color:Colors.deepOrange,fontSize:12))),
-    const materialText.Text('Satu tanggal hanya untuk satu pegawai. Pengajuan menunggu Admin juga memblokir tanggal.',style:TextStyle(fontSize:11)),
+    const materialText.Text('Satu tanggal hanya untuk satu pegawai. Pengajuan menunggu Lurah juga memblokir tanggal.',style:TextStyle(fontSize:11)),
     TextField(controller:addr,maxLength:155,maxLines:2,decoration:const InputDecoration(labelText:'V. Alamat selama cuti')),
     TextField(controller:phone,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'Nomor telepon')),
     const materialText.Text('Jumlah hari kerja dihitung server; hari libur diatur admin.',style:TextStyle(fontSize:11)),
@@ -138,17 +139,17 @@ class _LeaveState extends State<CikokoPpsuLeaveHub> {
   ));
   year.dispose();allowance.dispose();
  }
- Future<void> officialEditor()async{
+ Future<void> officialEditor([Map<String,dynamic>? existing])async{
   final people=[...(adminData['supervisors'] as List<dynamic>? ?? []),...(adminData['lurah'] as List<dynamic>? ?? [])];
-  String? person;XFile? photo;XFile? signature;
-  final name=TextEditingController(),title=TextEditingController(),nip=TextEditingController(),unit=TextEditingController(text:'Kelurahan Cikoko');
+  String? person=existing?['user_id']?.toString();XFile? photo;XFile? signature;
+  final name=TextEditingController(text:existing?['full_name']?.toString()??''),title=TextEditingController(text:existing?['title']?.toString()??''),nip=TextEditingController(text:existing?['nip']?.toString()??''),unit=TextEditingController(text:existing?['work_unit']?.toString()??'Kelurahan Cikoko');
   await showDialog<void>(context:context,builder:(dialog)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
    title:const materialText.Text('Profil Pimpinan & QR Unik'),
    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    DropdownButtonFormField<String>(isExpanded:true,decoration:const InputDecoration(labelText:'Akun pejabat'),
+    DropdownButtonFormField<String>(value:person,isExpanded:true,decoration:const InputDecoration(labelText:'Akun pejabat'),
      items:people.map((e)=>DropdownMenuItem<String>(value:e['user_id'].toString(),
       child:materialText.Text(e['name'].toString()+' ('+e['role'].toString()+')'))).toList(),
-     onChanged:(v)=>update(()=>person=v)),
+     onChanged:existing!=null?null:(v)=>update(()=>person=v)),
     TextField(controller:name,decoration:const InputDecoration(labelText:'Nama pejabat')),
     TextField(controller:title,decoration:const InputDecoration(labelText:'Jabatan pada surat')),
     TextField(controller:nip,decoration:const InputDecoration(labelText:'NIP')),
@@ -218,40 +219,51 @@ class _LeaveState extends State<CikokoPpsuLeaveHub> {
   field.dispose();
  }
  Future<void> decide(Map<String,dynamic> r)async{
+  if(!lurah)return;
   String decision='approve';
   final reason=TextEditingController();
-  final number=TextEditingController(text:(r['official_number']??'').toString());
   await showDialog<void>(context:context,builder:(dialog)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
-   title:materialText.Text('Persetujuan Cuti #'+r['id'].toString()),
+   title:materialText.Text('Keputusan Lurah - Cuti #'+r['id'].toString()),
    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    DropdownButtonFormField<String>(value:decision,decoration:const InputDecoration(labelText:'Keputusan Admin'),
+    const materialText.Text('Periksa PDF draf sebelum memutuskan. Nomor surat dibuat otomatis setelah persetujuan Lurah.'),
+    TextButton.icon(onPressed:()=>previewLetter(r),icon:const Icon(Icons.picture_as_pdf),label:const materialText.Text('Lihat PDF layar penuh')),
+    DropdownButtonFormField<String>(value:decision,decoration:const InputDecoration(labelText:'Keputusan Lurah'),
      items:const [
-      DropdownMenuItem(value:'approve',child:materialText.Text('Disetujui')),
-      DropdownMenuItem(value:'revision',child:materialText.Text('Perubahan')),
-      DropdownMenuItem(value:'defer',child:materialText.Text('Ditangguhkan')),
-      DropdownMenuItem(value:'reject',child:materialText.Text('Ditolak')),
+      DropdownMenuItem(value:'approve',child:materialText.Text('Setujui')),
+      DropdownMenuItem(value:'revision',child:materialText.Text('Minta revisi')),
+      DropdownMenuItem(value:'defer',child:materialText.Text('Tangguhkan')),
+      DropdownMenuItem(value:'reject',child:materialText.Text('Tolak')),
      ],onChanged:(v)=>update(()=>decision=v??'approve')),
-    if(decision=='approve')...[
-     const SizedBox(height:12),
-     TextField(controller:number,decoration:const InputDecoration(
-      labelText:'Nomor Surat Cuti (opsional)',hintText:'Otomatis: 35/KG 11.01',
-      helperText:'Kosongkan agar nomor dibuat berurutan saat disetujui; bisa diisi manual')),
-    ],
-    if(decision!='approve')TextField(controller:reason,maxLines:2,
-     decoration:const InputDecoration(labelText:'Alasan keputusan')),
+    if(decision!='approve')TextField(controller:reason,maxLines:3,
+     decoration:const InputDecoration(labelText:'Alasan wajib diisi')),
    ])),
    actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const materialText.Text('Batal')),
     FilledButton(onPressed:()async{
-     if(decision=='approve'&&number.text.trim().isNotEmpty&&!RegExp(r'^[a-zA-Z0-9./ -]{4,100}$').hasMatch(number.text.trim())){
-      toast('Isi nomor surat resmi, contoh: 12/KG 11.01');return;
-     }
-     await post(dialog,'pjlp_review',{
-      'request_id':r['id'],'decision':decision,'reason':reason.text,
-      'official_number':number.text.trim()
-     });
-    },child:materialText.Text(decision=='approve'?'Setujui & Terbitkan PDF':'Simpan Keputusan'))],
+     if(decision!='approve'&&reason.text.trim().isEmpty){toast('Alasan keputusan wajib diisi');return;}
+     await post(dialog,'pjlp_review',{'request_id':r['id'],'decision':decision,'reason':reason.text.trim()});
+    },child:materialText.Text(decision=='approve'?'Setujui dan Terbitkan Surat':'Simpan Keputusan'))],
   )));
-  reason.dispose();number.dispose();
+  reason.dispose();
+ }
+ Future<void> previewLetter(Map<String,dynamic> r)async{
+  try{
+   final uri=Uri.parse(CikokoApi.root+'?action=pjlp_preview&id='+r['id'].toString());
+   final response=await http.get(uri,headers:{
+    'Authorization':'Bearer '+(widget.api.token??''),'Accept':'application/pdf'
+   }).timeout(const Duration(seconds:40));
+   if(response.statusCode!=200||!response.headers['content-type'].toString().contains('application/pdf'))
+    throw ApiError('Pratinjau PDF belum tersedia. Pastikan patch backend terpasang.');
+   if(!mounted)return;
+   await Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>Scaffold(
+    appBar:AppBar(title:materialText.Text('Pratinjau Cuti #'+r['id'].toString())),
+    body:PdfPreview(
+     build:(_)=>response.bodyBytes,
+     allowPrinting:false,allowSharing:false,
+     canChangePageFormat:false,canChangeOrientation:false,
+     pdfFileName:'Pratinjau-Cuti-PJLP-'+r['id'].toString()+'.pdf',
+    ),
+   )));
+  }catch(e){toast(e);}
  }
  Future<void> printLetter(Map<String,dynamic> r)async{
   try{
@@ -261,6 +273,21 @@ class _LeaveState extends State<CikokoPpsuLeaveHub> {
    }).timeout(const Duration(seconds:40));
    if(response.statusCode!=200||!response.headers['content-type'].toString().contains('application/pdf'))throw ApiError('Surat PDF belum tersedia.');
    await Printing.layoutPdf(name:'Cuti-PPSU-'+r['id'].toString()+'.pdf',onLayout:(_)=>response.bodyBytes);
+  }catch(e){toast(e);}
+ }
+ Future<void> deleteOfficial(Map<String,dynamic> item)async{
+  final person=item['user_id']?.toString()??'';
+  if(person.isEmpty)return;
+  final confirmed=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+   title:const materialText.Text('Hapus Profil Pejabat?'),
+   content:materialText.Text('Profil '+(item['full_name']?.toString()??'')+' akan dihapus dari database jika belum digunakan oleh surat resmi. Akun login tidak akan dihapus.'),
+   actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const materialText.Text('Batal')),
+    TextButton(onPressed:()=>Navigator.pop(ctx,true),child:const materialText.Text('Hapus Profil'))],
+  ));
+  if(confirmed!=true||!mounted)return;
+  try{
+   await widget.api.call('pjlp_official_delete',body:{'user_id':person,'confirm':'HAPUS'});
+   toast('Profil pejabat dihapus');await reload();
   }catch(e){toast(e);}
  }
  Widget employeePanel(){
@@ -314,6 +341,10 @@ class _LeaveState extends State<CikokoPpsuLeaveHub> {
      crossAxisAlignment:CrossAxisAlignment.start,children:[
       materialText.Text(raw['full_name'].toString(),style:const TextStyle(fontWeight:FontWeight.bold)),
       materialText.Text(raw['title'].toString()+' · '+raw['nip'].toString()),
+      Row(children:[
+       TextButton.icon(onPressed:()=>officialEditor(Map<String,dynamic>.from(raw as Map)),icon:const Icon(Icons.edit),label:const materialText.Text('Edit')),
+       TextButton.icon(onPressed:()=>deleteOfficial(Map<String,dynamic>.from(raw as Map)),icon:const Icon(Icons.delete_outline),label:const materialText.Text('Hapus')),
+      ]),
       if(raw['public_token']!=null&&raw['public_token'].toString().isNotEmpty)...[
        Center(child:QrImageView(
         data:'https://datawebs.my.id/mobile-api/pjlp_profile.php?id='+raw['public_token'].toString(),
@@ -330,12 +361,13 @@ class _LeaveState extends State<CikokoPpsuLeaveHub> {
  }
  String statusText(String s)=>switch(s){
   'pending_admin'=>'Menunggu Admin','pending_supervisor'=>'Menunggu Admin',
-  'pending_lurah'=>'Menunggu Admin','approved'=>'Disetujui',
+  'pending_lurah'=>'Menunggu Lurah','approved'=>'Disetujui',
   'revision'=>'Perubahan','deferred'=>'Ditangguhkan','rejected'=>'Ditolak',_=>s
  };
  Widget requestItem(Map<String,dynamic> r){
   final status=r['status'].toString();
-  final permitted=admin&&(status=='pending_admin'||status=='pending_supervisor'||status=='pending_lurah');
+  final pending=status=='pending_admin'||status=='pending_supervisor'||status=='pending_lurah';
+  final permitted=lurah&&pending;
   return Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(
    crossAxisAlignment:CrossAxisAlignment.start,children:[
     materialText.Text('#'+r['id'].toString()+' · '+(r['full_name']??profile['employee']?['full_name']??'PPSU').toString(),
@@ -344,8 +376,8 @@ class _LeaveState extends State<CikokoPpsuLeaveHub> {
     materialText.Text(r['reason'].toString(),maxLines:2,overflow:TextOverflow.ellipsis),
     materialText.Text(statusText(status),style:const TextStyle(color:Colors.blue,fontWeight:FontWeight.bold)),
     Wrap(spacing:8,children:[
-     if(permitted)TextButton.icon(onPressed:()=>decide(r),icon:const Icon(Icons.fact_check),label:const materialText.Text('Keputusan')),
-     if(admin&&(status=='pending_admin'||status=='pending_supervisor'||status=='pending_lurah'))TextButton.icon(onPressed:()=>numberEditor(r),icon:const Icon(Icons.tag),label:const materialText.Text('Nomor Surat')),
+     if((admin||lurah)&&pending)TextButton.icon(onPressed:()=>previewLetter(r),icon:const Icon(Icons.picture_as_pdf),label:const materialText.Text('Lihat Draf PDF')),
+     if(permitted)TextButton.icon(onPressed:()=>decide(r),icon:const Icon(Icons.fact_check),label:const materialText.Text('Keputusan Lurah')),
      if(status=='approved')TextButton.icon(onPressed:()=>printLetter(r),icon:const Icon(Icons.print),label:const materialText.Text('Cetak PDF')),
     ])
    ])));
@@ -361,6 +393,8 @@ class _LeaveState extends State<CikokoPpsuLeaveHub> {
    if(!loading&&error==null)...[
     if(ppsu)employeePanel(),
     if(admin)adminPanel(),
+    if(admin)const Card(child:ListTile(leading:Icon(Icons.inbox_outlined),title:materialText.Text('Surat masuk untuk Admin'),subtitle:materialText.Text('Admin hanya menerima dan memantau. Keputusan akhir serta nomor surat oleh Lurah.'))),
+    if(lurah)const Card(child:ListTile(leading:Icon(Icons.verified_user_outlined),title:materialText.Text('Persetujuan oleh Lurah'),subtitle:materialText.Text('Buka draf PDF layar penuh sebelum memberi keputusan.'))),
     materialText.Text('Riwayat / Pengajuan ('+requests.length.toString()+')',
      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16)),
     if(requests.isEmpty)const Card(child:ListTile(title:materialText.Text('Belum ada pengajuan'))),
