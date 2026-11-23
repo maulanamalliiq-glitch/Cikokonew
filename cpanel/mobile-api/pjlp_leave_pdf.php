@@ -19,7 +19,7 @@ function pjlp_pdf_safe(string $s,int $chars=100):string {
  if(strlen($s)>$chars)return substr($s,0,$chars-3).'...';
  return $s;
 }
-function pjlp_pdf_build(PDO $db,array $r):string {
+function pjlp_pdf_build(PDO $db,array $r,bool $draft=false):string {
  $a=$db->prepare('SELECT * FROM pjlp_leave_approvals WHERE request_id=? ORDER BY id');
  $a->execute([(int)$r['id']]);$approvals=$a->fetchAll(PDO::FETCH_ASSOC);
  $supUid=(string)$r['supervisor_user_id'];
@@ -29,9 +29,11 @@ function pjlp_pdf_build(PDO $db,array $r):string {
  $lurahSt=$db->query("SELECT user_id FROM pjlp_officials WHERE LOWER(title) LIKE '%lurah%' ORDER BY user_id LIMIT 1");
  $lurahUid=(string)($lurahSt->fetchColumn()?:'');
  $lurah=$lurahUid?pjlp_valid_official($db,$lurahUid):null;
- if(!$super||!$lurah||empty($super['qr_file'])||empty($lurah['qr_file']))pjlp_fail('Data QR pejabat belum lengkap',503);
+ if(!$draft&&(!$super||!$lurah||empty($super['qr_file'])||empty($lurah['qr_file'])))pjlp_fail('Data QR pejabat belum lengkap',503);
+ $super=$super?:['title'=>'Kasi Ekonomi & Pembangunan','full_name'=>'','nip'=>''];
+ $lurah=$lurah?:['title'=>'Lurah','full_name'=>'','nip'=>''];
  $base=pjlp_private_dir('qr').'/';
- $qrFiles=[$base.$super['qr_file'],$base.$lurah['qr_file']];
+ $qrFiles=$draft?[]:[$base.$super['qr_file'],$base.$lurah['qr_file']];
  $images=[];
  foreach($qrFiles as $path){
   if(!is_file($path))pjlp_fail('File QR pejabat tidak ditemukan',503);
@@ -76,9 +78,9 @@ function pjlp_pdf_build(PDO $db,array $r):string {
  $t(397,788,'Kota Administrasi Jakarta Selatan',8);
  $center(470,777,'Di',8);$center(470,766,'Jakarta',8);
  $center(297,740,'SURAT CUTI PJLP KELURAHAN CIKOKO',10.5,true);
- $center(297,726,'Nomor : '.pjlp_pdf_safe((string)$r['official_number'],70),8);
+ $center(297,726,$draft?'DRAF - BELUM DISETUJUI LURAH':'Nomor : '.pjlp_pdf_safe((string)$r['official_number'],70),8);
  $t(42,710,'Pengajuan Surat : '.pjlp_print_date((string)$r['submitted_at'],true),8);
- $t(42,699,'Terverifikasi Surat : '.pjlp_print_date((string)$r['verified_at'],true),8);
+ $t(42,699,$draft?'Status : Menunggu keputusan Lurah':'Terverifikasi Surat : '.pjlp_print_date((string)$r['verified_at'],true),8);
 
  // I. Employee profile.
  $header(678,622,'I. DATA PEGAWAI');
@@ -133,7 +135,7 @@ function pjlp_pdf_build(PDO $db,array $r):string {
  $ln(331,195,331,308);$ln(42,294,331,294);$ln(42,280,331,280);
  $ln(138,280,138,308);$ln(234,280,234,308);
  $center(90,298,'DISETUJUI',6.5);$center(186,298,'PERUBAHAN',6.5);$center(282,298,'DITANGGUHKAN',6.5);
- $tick(88,288);$field(48,270,'Alasan :');
+ $field(48,270,'QR Kasi: identitas pejabat, bukan persetujuan');
  $center(442,298,pjlp_pdf_safe((string)$super['title'],42),7.2);
  $center(442,215,pjlp_pdf_safe((string)$super['full_name'],38),7.6);
  $center(442,202,'NIP '.(string)$super['nip'],7.4);
@@ -143,20 +145,22 @@ function pjlp_pdf_build(PDO $db,array $r):string {
  $ln(331,38,331,174);$ln(42,160,331,160);$ln(42,146,331,146);
  $ln(138,146,138,174);$ln(234,146,234,174);
  $center(90,164,'DISETUJUI',6.5);$center(186,164,'PERUBAHAN',6.5);$center(282,164,'DITANGGUHKAN',6.5);
- $tick(88,154);$field(48,136,'Alasan :');
+ if(!$draft)$tick(88,154);$field(48,136,$draft?'Menunggu keputusan Lurah':'Disetujui oleh Lurah');
  $center(442,165,pjlp_pdf_safe((string)$lurah['title'],42),7.5);
  $center(442,60,pjlp_pdf_safe((string)$lurah['full_name'],38),7.6);
  $center(442,47,'NIP '.(string)$lurah['nip'],7.4);
 
  // Two independently uploaded fixed QR images, centered in each signatory area.
- $c.="q 61 0 0 61 411 226 cm /Im1 Do Q\n";
- $c.="q 78 0 0 78 403 73 cm /Im2 Do Q\n";
+ if(!$draft){
+  $c.="q 61 0 0 61 411 226 cm /Im1 Do Q\n";
+  $c.="q 78 0 0 78 403 73 cm /Im2 Do Q\n";
+ }
  $objects=[];
  $objects[1]='<< /Type /Catalog /Pages 2 0 R >>';
  $objects[2]='<< /Type /Pages /Kids [5 0 R] /Count 1 >>';
  $objects[3]='<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
  $objects[4]='<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>';
- $objects[5]='<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> /XObject << /Im1 7 0 R /Im2 8 0 R >> >> /Contents 6 0 R >>';
+ $objects[5]='<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> '.($draft?'':'/XObject << /Im1 7 0 R /Im2 8 0 R >> ').'>> /Contents 6 0 R >>';
  $objects[6]='<< /Length '.strlen($c)." >>\nstream\n".$c."endstream";
  foreach($images as $i=>$img){
   $objects[7+$i]='<< /Type /XObject /Subtype /Image /Width '.$img['width'].' /Height '.$img['height'].' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '.strlen($img['jpg'])." >>\nstream\n".$img['jpg']."\nendstream";
