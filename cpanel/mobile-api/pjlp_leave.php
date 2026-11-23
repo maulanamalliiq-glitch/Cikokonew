@@ -234,6 +234,24 @@ function pjlp_mobile_dispatch(string $action,string $method,?array $trustedWebsi
   pjlp_audit($db,null,$uid,'official_profile_saved',['user_id'=>$person,'photo_updated'=>$encoded!=='','public'=>$public]);
   mobile_json(['ok'=>true,'profile_url'=>'https://datawebs.my.id/mobile-api/pjlp_profile.php?id='.$token]);
  }
+ if($action==='pjlp_official_delete'&&$method==='POST'){
+  if(!$admin)pjlp_fail('Akses admin diperlukan',403);
+  $b=mobile_body();$person=mobile_text($b['user_id']??'',80);
+  if($person===''||($b['confirm']??'')!=='HAPUS')pjlp_fail('Konfirmasi hapus tidak valid',422);
+  $previous=pjlp_valid_official($db,$person);
+  if(!$previous)pjlp_fail('Profil pejabat tidak ditemukan',404);
+  // Preserve officials referenced by employee leave assignments or historical letters.
+  $used=$db->prepare('SELECT COUNT(*) FROM pjlp_employees WHERE supervisor_user_id=?');
+  $used->execute([$person]);
+  if((int)$used->fetchColumn()>0)pjlp_fail('Profil pejabat masih digunakan sebagai atasan PJLP. Ubah penugasan terlebih dahulu.',409);
+  // Historical PDF QR references must remain verifiable: approved letters cannot lose their official.
+  $approved=$db->query("SELECT COUNT(*) FROM pjlp_leave_requests WHERE status='approved'")->fetchColumn();
+  if((int)$approved>0&&preg_match('/lurah/i',(string)$previous['title']))
+   pjlp_fail('Profil Lurah tidak boleh dihapus selama ada surat cuti disetujui. Gunakan Edit.',409);
+  $db->prepare('DELETE FROM pjlp_officials WHERE user_id=?')->execute([$person]);
+  pjlp_audit($db,null,$uid,'official_profile_deleted',['user_id'=>$person]);
+  mobile_json(['ok'=>true]);
+ }
  if($action==='pjlp_apply'&&$method==='POST'){
   if(!in_array($role,['ppsu','pjlp'],true)||!$self)pjlp_fail('Admin harus mendaftarkan akun PPSU Anda terlebih dahulu',403);
   $b=mobile_body();$a=pjlp_date((string)($b['start_date']??''));$z=pjlp_date((string)($b['end_date']??''));
